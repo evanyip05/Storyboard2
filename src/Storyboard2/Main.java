@@ -1,19 +1,12 @@
 package Storyboard2;
 
 import Storyboard2.Core.*;
-import Storyboard2.Utils.ExtendableThread;
-import Storyboard2.Utils.TimedExecutable;
 
-import javax.swing.*;
 import java.awt.*;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.Locale;
-import java.util.Random;
 import java.util.Scanner;
-import java.util.function.Consumer;
 
 public class Main {
 
@@ -21,31 +14,26 @@ public class Main {
 
     public static void main(String[] args) {
         TileSet tileSet = new TileSet("./Files/breadboard.png", tileSize, 32);
-        writeToFile("./Files/test.txt", generateLevelFromTileSet(tileSet));
         Level level = new Level("./Files/test.txt", true);
 
-        //Editor editor = new Editor(level, tileSet, 16, 16);
-        //TileDisplay a = new TileDisplay(level, tileSet, 500, 500, 1000, 1000, 32);
+        Editor editor = new Editor(level, tileSet, new Dimension(700, 500), new Dimension(240, 480));
 
-        Editor editor = new Editor(level, tileSet, new Dimension(500, 100), new Dimension(100, 100));
+        //writeToFile("./Files/test.txt", generateLevelFromTileSet(tileSet));
 
+        editor.doRandomAnimation(false);
     }
 
-    public static String generateLevelFromTileSet(TileSet tileSet) {
-        return generateLevel(tileSet.getWidth(), tileSet.getHeight());
-    }
+    public static String generateLevelFromTileSet(TileSet tileSet) {return generateLevel(tileSet.getWidth(), tileSet.getHeight());}
 
     public static String generateLevel(int width, int height) {
-        int currentTile = 1;
-
-        String res = "";
+        int currentTile = 1; String res = "";
 
         for (int y = 0; y < height; y++) {
             for (int x = 0; x < width; x++) {
                 res+=currentTile+":0:0:0,";
                 ++currentTile;
             }
-            res = res.substring(0, res.length()-1)+";";
+            res = res.substring(0, res.length()-1)+";\n";
         }
 
         return res.substring(0,res.length()-1);
@@ -60,7 +48,7 @@ public class Main {
             for (int x = 0; x < level.getWidth(); x++) {
                 levelContent += level.getInfo(x,y) + ",";
             }
-            levelContent=levelContent.substring(0, levelContent.length()-1) + ";";
+            levelContent=levelContent.substring(0, levelContent.length()-1) + ";\n";
         }
 
         writeToFile(levelDir, levelContent);
@@ -84,28 +72,3 @@ public class Main {
         catch (IOException e) {System.out.println("file does not exist or could not write");}
     }
 }
-/*
-listener.addMousePressBind(MouseEvent.BUTTON1, (panel, mouseEvent) -> game.requestFocus());
-
-        listener.addKeyPressBind(KeyEvent.VK_ESCAPE, (panel, keyEvent) -> System.exit(0));
-        listener.addKeyPressBind(KeyEvent.VK_SPACE,  (panel, keyEvent) -> System.out.println("debug"));
-
-        listener.addKeyPressBind(KeyEvent.VK_UP   ,  (panel, keyEvent) -> game.moveCameraY(-1));
-        listener.addKeyPressBind(KeyEvent.VK_DOWN ,  (panel, keyEvent) -> game.moveCameraY(1));
-        listener.addKeyPressBind(KeyEvent.VK_LEFT ,  (panel, keyEvent) -> game.moveCameraX(-1));
-        listener.addKeyPressBind(KeyEvent.VK_RIGHT,  (panel, keyEvent) -> game.moveCameraX(1));
-
-        //listener.addKeyBind(KeyEvent.VK_UP   , (panel, keyEvent) -> game.endMoveU());
-        //listener.addKeyBind(KeyEvent.VK_DOWN , (panel, keyEvent) -> game.endMoveD());
-        //listener.addKeyBind(KeyEvent.VK_LEFT , (panel, keyEvent) -> game.endMoveL());
-        //listener.addKeyBind(KeyEvent.VK_RIGHT, (panel, keyEvent) -> game.endMoveR());
-
-        listener.addKeyPressBind(KeyEvent.VK_CONTROL, (panel, keyEvent) -> {
-            display.redefine(10, 10, 16);
-            display.nextFrame();
-        });
-        listener.addKeyPressBind(KeyEvent.VK_SHIFT, (panel, keyEvent) -> {
-            display.redefine(10, 10, 32);
-            display.nextFrame();
-        });
- */
