@@ -11,8 +11,8 @@ public class Level {
     private final int width, height;
 
     /** level from existing data */
-    public Level(String levelDir) {
-        String levelData = fileToString(levelDir);
+    public Level(String info, boolean isDir) {
+        String levelData = isDir?fileToString(info):info;
 
         width = levelData.split("[;]")[0].split("[,]").length;
         height = levelData.split("[;]").length;
@@ -22,22 +22,6 @@ public class Level {
                 infoMap.put(new Point(x, y), levelData.split("[;]")[y].split("[,]")[x]);
             }
         }
-    }
-
-    /** blank level from dims */
-    public Level(int width, int height) {
-        System.out.println("creating level...");
-
-        this.width = width;
-        this.height = height;
-
-        for (int y = 0; y < height; ++y) {
-            for (int x = 0; x < width; ++x) {
-                infoMap.put(new Point(x, y), "0:0:0:0");
-            }
-        }
-
-        System.out.println("done\n");
     }
 
     /** gets tile in map, empty tile if missing */

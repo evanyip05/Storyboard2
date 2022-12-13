@@ -1,188 +1,226 @@
 package Storyboard2.Core;
 
 import Storyboard2.Utils.ExtendableThread;
+import Storyboard2.Utils.TimedExecutable;
+import Storyboard2.Utils.TimedSequence;
 
 import javax.swing.*;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.util.function.Consumer;
 
-/** subclass of jpanel built to display a level using a tileset
- *  uses a "camera" that can be moved to display an image */
 public class TileDisplay extends JPanel {
-    private Level level;
-    private TileSet tileSet;
-    private BufferedImage image;
-    private Consumer<ExtendableThread> move = thread -> {};
-
-    private int tilesX, tilesY, tileSize;
-    private int imageOffsetX = 0, imageOffsetY = 0;
-
-    private boolean animating = false;
-
+    private final TimedSequence animationSequence;
+    private final Dimension displaySize;
     private final Rectangle cam;
-    private final Dimension panelSize;
-    private final ExtendableThread mover;
+    private final TileSet tileSet;
+    private final Point projection;
+    private final Level level;
 
-    /** level and tileset are references,
-     *  tiles x/y are #tiles you want to display,
-     *  tilesize is the size of the tile the tileset produces */
-    public TileDisplay(Level level, TileSet tileSet, int tilesX, int tilesY, int tileSize) {
+    private final Image image;
+
+    private final int tileSize;
+
+    public TileDisplay(Level level, TileSet tileSet, int camWidth, int camHeight, int displayWidth, int displayHeight, int tileSize) {
         this.tileSize = tileSize;
         this.tileSet = tileSet;
-        this.tilesX = tilesX;
-        this.tilesY = tilesY;
         this.level = level;
 
-        tilesX = Math.min(tilesX, level.getWidth());
-        tilesY = Math.min(tilesY, level.getHeight());
+        image = generateImage();
 
-        image = createLevelImage();
-        cam = new Rectangle(0, 0, tilesX, tilesY);
-        panelSize = new Dimension(tileSize * tilesX, tileSize * tilesY);
-        mover = new ExtendableThread() {
-            @Override public void execute() {move.accept(mover);}
-            @Override public boolean waitCondition() {return !animating;}
-        };
+        cam = new Rectangle(0,0, camWidth, camHeight);
+        projection = new Point(0,0);
 
-        setPreferredSize(panelSize);
-        setSize(panelSize);
+        animationSequence = new TimedSequence();
+        displaySize = new Dimension(displayWidth, displayHeight);
+
+        setSize(displaySize);
+        setPreferredSize(displaySize);
     }
 
-    /** create a image of the level using the tileset (only done after changes to level info were made to update image) */
-    public BufferedImage createLevelImage() {
-        BufferedImage res = new BufferedImage(
-                level.getWidth()* tileSize,
-                level.getHeight()* tileSize,
-                BufferedImage.TRANSLUCENT
-        );
+    public BufferedImage generateImage() {
+        BufferedImage res = new BufferedImage(level.getWidth()*tileSize, level.getHeight()*tileSize, BufferedImage.TRANSLUCENT);
         Graphics g = res.getGraphics();
 
-        // never nester
         for (int y = 0; y < level.getHeight(); y++) {
             for (int x = 0; x < level.getWidth(); x++) {
-                g.drawImage(
-                        tileSet.getTileImage(Integer.parseInt(level.getInfo(x,y).split("[:]")[0])),
-                        x* tileSize,
-                        y* tileSize,
-                        null
-                );
+                g.drawImage(tileSet.getTileImage(Integer.parseInt(level.getInfo(x, y).split("[:]")[0])), x*tileSize, y*tileSize, null);
             }
         }
 
         return res;
     }
 
-    public int getTileSize() {return tileSize;}
-    public int getDisplayedTilesX() {return tilesX;}
-    public int getDisplayedTilesY() {return tilesY;}
+    public TimedExecutable getCameraAnimation(Point finalCamLoc, Point finalProjectionLoc, Dimension finalCamSize, int animationMillis, int postMillis) {
+        return thread -> {
+            int animationAcceleration = 16, finalAnimationMillis = Math.max(animationMillis, animationAcceleration);
+            int totalDroppedFrames = 0;
 
-    /** its just repaint (im loosing it) */
-    public void nextFrame() {repaint();}
+            // totals
+            double totalCamDistX = cam.x, totalCamDistY = cam.y;
+            double totalProjectionDistX = projection.x, totalProjectionDistY = projection.y;
+            double totalCamWidthTransform = cam.width, totalCamHeightTransform = cam.height;
 
-    /** redefine the level and tileset */
-    public void redefine(Level level, TileSet tileSet) {redefine(level, tileSet, tilesX, tilesY, tileSize);}
+            // deltas to use
+            double camDeltaX = (finalCamLoc.x - cam.x + 0.0) / finalAnimationMillis;
+            double camDeltaY = (finalCamLoc.y - cam.y + 0.0) / finalAnimationMillis;
+            double projectionDeltaX = (finalProjectionLoc.x - projection.x + 0.0) / finalAnimationMillis;
+            double projectionDeltaY = (finalProjectionLoc.y - projection.y + 0.0) / finalAnimationMillis;
+            double camWidthDelta = (finalCamSize.width - cam.width + 0.0) / finalAnimationMillis;
+            double camHeightDelta = (finalCamSize.height - cam.height + 0.0) / finalAnimationMillis;
 
-    /** redefine tiles to display and tilesize */
-    public void redefine(int tilesX, int tilesY, int tileSize) {redefine(level, tileSet, tilesX, tilesY, tileSize);}
+            int accumulatedTimeError = 0, targetTime = finalAnimationMillis / (finalAnimationMillis / animationAcceleration);
 
-    /** redefine level, tileset, tiles to display, and tilesize */
-    public void redefine(Level level, TileSet tileSet, int tilesX, int tilesY, int tileSize) {
-        this.tileSize = tileSize;
-        this.tileSet = tileSet;
-        this.tilesX = tilesX;
-        this.tilesY = tilesY;
-        this.level = level;
+            for (int milli = 0; milli < finalAnimationMillis / animationAcceleration; milli++) {
+                // time action
+                long moveStartTime = System.currentTimeMillis();
 
-        image = createLevelImage();
+                totalCamDistX += camDeltaX * animationAcceleration;
+                totalCamDistY += camDeltaY * animationAcceleration;
+                totalProjectionDistX += projectionDeltaX * animationAcceleration;
+                totalProjectionDistY += projectionDeltaY * animationAcceleration;
+                totalCamWidthTransform += camWidthDelta * animationAcceleration;
+                totalCamHeightTransform += camHeightDelta * animationAcceleration;
 
-        setCameraPos(0,0);
+                cam.setLocation((int) totalCamDistX, (int) totalCamDistY);
+                cam.setSize((int) totalCamWidthTransform, (int) totalCamHeightTransform);
+                projection.setLocation((int) totalProjectionDistX, (int) totalProjectionDistY);
 
-        tilesX = Math.min(tilesX, level.getWidth());
-        tilesY = Math.min(tilesY, level.getHeight());
+                repaint();
+                thread.pause(1);
 
-        panelSize.setSize(tileSize * tilesX, tileSize * tilesY);
-        cam.setSize(tilesX, tilesY);
+                // time action
+                long moveTotalTime = System.currentTimeMillis() - moveStartTime;
 
-        setPreferredSize(panelSize);
-        setSize(panelSize);
-        nextFrame();
+                // calculate time error
+                accumulatedTimeError += moveTotalTime - targetTime;
+                if (accumulatedTimeError >= targetTime) {
+                    // figure out how many frames to drop
+                    int droppedFrames = accumulatedTimeError / targetTime;
+                    totalDroppedFrames += droppedFrames;
+                    // advance frames by dropped frames
+                    milli += droppedFrames;
+                    // reset accumulated error
+                    accumulatedTimeError = 0;
+
+                    // advance totals for each frame dropped
+                    totalCamDistX += (camDeltaX * animationAcceleration) * droppedFrames;
+                    totalCamDistY += (camDeltaY * animationAcceleration) * droppedFrames;
+                    totalProjectionDistX += (projectionDeltaX * animationAcceleration) * droppedFrames;
+                    totalProjectionDistY += (projectionDeltaY * animationAcceleration) * droppedFrames;
+                    totalCamWidthTransform += (camWidthDelta * animationAcceleration) * droppedFrames;
+                    totalCamHeightTransform += (camHeightDelta * animationAcceleration) * droppedFrames;
+                }
+            }
+
+            cam.setLocation(finalCamLoc);
+            cam.setSize(finalCamSize);
+            projection.setLocation(finalProjectionLoc);
+
+            if (postMillis > 0) {thread.pause(postMillis);}
+
+            System.out.println(totalDroppedFrames + " frames dropped");
+        };
     }
 
-    public void setCameraPos(int tileX, int tileY) {cam.setLocation(tileX, tileY);}
-    public void moveCamera(int tilesX, int tilesY) {cam.translate(tilesX, tilesY);}
-
-    /** set pixels off the tile camera is on */
-    public void setCameraOff(int offX, int offY) {imageOffsetX = offX; imageOffsetY = offY;}
-    /** add pixels off the tile camera is on */
-    public void stepCamera(int offX, int offY) {imageOffsetX+=offX; imageOffsetY+=offY;}
-
-    /** move the camera a specified distance x and y at the same time in a target timeframe pause after if needed,
-     *  if restricted camera cant leave bounds of image */
-    public void animateCamera(int tilesX, int tilesY, int animationMillis, int postAnimationMillis, boolean unrestricted) {
-        if (!animating&&(unrestricted||camCanMove(tilesX, tilesY))) {
-            int acceleration = 15, animationMillis1 = Math.max(animationMillis, 15);; // "acceleration" and final animation time
-
-            animating = true;
-
-            move = thread -> {
-                // totals and deltas
-                double totalX = 0, totalY = 0, dx = (tilesX * tileSize+0.0) / animationMillis1, dy = (tilesY * tileSize+0.0) / animationMillis1;
-                // time error, ideal time per move
-                int accumulatedError = 0, targetTime = animationMillis1/(animationMillis1/acceleration);
-
-                for (int milli = 0; milli < animationMillis1/acceleration; milli++) {
-                    // record start time
-                    long moveStartTime = System.currentTimeMillis();
-
-                    totalX += (dx * acceleration); totalY += (dy * acceleration);
-
-                    setCameraOff((int) totalX, (int) totalY);
-                    nextFrame(); thread.pause(1);
-
-                    // calculate actual move time using difference of current and start time
-                    long moveTime = System.currentTimeMillis() - moveStartTime;
-
-                    // add difference of actual move time from ideal move time to error
-                    accumulatedError += moveTime - targetTime;
-                    // if error becomes more than the target time, drop a frame
-                    if (accumulatedError >= targetTime) {
-                        totalX += (dx * acceleration); totalY += (dy * acceleration);
-                        milli+=accumulatedError/targetTime;
-                        accumulatedError = 0;
-                    }
-                }
-
-                setCameraOff(0,0);
-                moveCamera(tilesX, tilesY);
-                nextFrame();
-
-                if(postAnimationMillis > 0) {thread.pause(postAnimationMillis);}
-
-                animating = false;
-            };
-
-            mover.restart();
+    public void animateCameraProjection(Point finalLoc, int animationTime, int postTime) {
+        if (animationSequence.notRunning()) {
+            animationSequence.setActionSequence(getCameraAnimation(cam.getLocation(), finalLoc, cam.getSize(), animationTime, postTime));
         }
     }
 
-    /** check if cam can go to this location */
-    public boolean camCanGoTo(int destTileX, int destTileY) {return destTileX>=0&&destTileY>=0&&destTileX+cam.width<=level.getWidth()&&destTileY+cam.height<=level.getHeight();}
-    /** check if cam can move to this location */
-    public boolean camCanMove(int tilesX, int tilesY) {return cam.x+tilesX>=0&&cam.y+tilesY>=0&&cam.x+cam.width+tilesX<=level.getWidth()&&cam.y+cam.height+tilesY<=level.getHeight();}
+    public void animateCameraLoc(int dx, int dy, int animationTime, int postTime) {
+        if (animationSequence.notRunning()) {
+            animationSequence.setActionSequence(getCameraAnimation(new Point(cam.x+dx, cam.y+dy), projection, cam.getSize(), animationTime, postTime));
+            animationSequence.run();
+        }
+    }
 
-    @Override
-    public void paint(Graphics g) {
-        g.clearRect(0, 0, panelSize.width, panelSize.height);
-        g.drawImage(image,
-                0, 0,
-                cam.width*tileSize,
-                cam.height*tileSize,
-                (cam.x*tileSize)+imageOffsetX,
-                (cam.y*tileSize)+imageOffsetY,
-                ((cam.x+cam.width)*tileSize)+imageOffsetX,
-                ((cam.y+cam.height)*tileSize)+imageOffsetY,
+    public void animateCameraFrame(Point finalLoc, int animationTime, int postTime) {
+        if (animationSequence.notRunning()) {
+            animationSequence.setActionSequence(getCameraAnimation(finalLoc, finalLoc, cam.getSize(), animationTime, postTime));
+            animationSequence.run();
+        }
+    }
+
+    public void animateCameraDimension(Dimension finalDim, int animationTime, int postTime) {
+        if (animationSequence.notRunning()) {
+            animationSequence.setActionSequence(getCameraAnimation(cam.getLocation(), projection, finalDim, animationTime, postTime));
+            animationSequence.run();
+        }
+    }
+
+    public void animateCamera(Point finalCamLoc, Point finalProjectionLoc, Dimension finalDim, int animationTime, int postTime) {
+        if (animationSequence.notRunning()) {
+            animationSequence.setActionSequence(getCameraAnimation(finalCamLoc, finalProjectionLoc, finalDim, animationTime, postTime));
+            animationSequence.run();
+        }
+    }
+
+    public void animateCamera(TimedExecutable... animations) {
+        if (animationSequence.notRunning()) {
+            animationSequence.setActionSequence(animations);
+            animationSequence.run();
+        }
+    }
+
+    @Override public void paint(Graphics g) {
+        g.clearRect(0,0, displaySize.width, displaySize.height);
+        g.drawImage(
+                image,
+                projection.x,
+                projection.y,
+                projection.x+cam.width,
+                projection.y+cam.height,
+                cam.x,
+                cam.y,
+                cam.x+cam.width,
+                cam.y+cam.height,
                 null
         );
     }
 }
+
+/*
+
+
+
+    public void animate(Consumer<ExtendableThread> animation) {
+        if (!animating) {
+            animating = true;
+            move = animation.andThen(thread -> {animating = false;});
+            mover.restart();
+        }
+    }
+
+    public void animateCamera(Consumer<ExtendableThread>... animationSequence) {
+        if (!animating) {
+            Consumer<ExtendableThread> res = thread -> {};
+            for (Consumer<ExtendableThread> animation : animationSequence) {res = res.andThen(animation);}
+
+            animating = true;
+            move = res.andThen(thread -> animating = false);
+            mover.restart();
+        }
+    }
+
+
+
+
+
+ public void setOffQueue() {
+        queueRunning = true;
+        queueAction(0);
+        System.out.println("queue finished");
+        queueRunning = false;
+    }
+    public void queueAction(int index) {
+        while (animating) {Thread.onSpinWait();}
+        if (moveQueue.size() > 0) {
+            animating = true;
+            move = moveQueue.get(index).andThen(thread -> moveQueue.remove(index));
+            mover.restart();
+            queueAction(index+1);
+        }
+    }
+ */

@@ -62,4 +62,6 @@ public class TileSet {
     public int getWidth() {return width;}
     /** height in tiles */
     public int getHeight() {return height;}
+    /** size of tile image output */
+    public int getTileOutputSize() {return tileOutputSize;}
 }

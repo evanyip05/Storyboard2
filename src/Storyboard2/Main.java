@@ -1,29 +1,37 @@
 package Storyboard2;
 
-import Storyboard2.Core.Level;
-import Storyboard2.Core.TileDisplay;
-import Storyboard2.Core.TileSet;
+import Storyboard2.Core.*;
+import Storyboard2.Utils.ExtendableThread;
+import Storyboard2.Utils.TimedExecutable;
 
+import javax.swing.*;
+import java.awt.*;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.Locale;
+import java.util.Random;
 import java.util.Scanner;
+import java.util.function.Consumer;
 
 public class Main {
 
     public static final int tileSize = 16;
 
     public static void main(String[] args) {
-        TileSet tileSet = new TileSet("./Files/borderTest.png", tileSize, 32);
+        TileSet tileSet = new TileSet("./Files/breadboard.png", tileSize, 32);
         writeToFile("./Files/test.txt", generateLevelFromTileSet(tileSet));
-        Level level = new Level("./Files/test.txt");
+        Level level = new Level("./Files/test.txt", true);
 
-        TileDisplay display1 = new TileDisplay(level, tileSet, 16, 10, 32);
-        Editor editor = new Editor(display1);
+        //Editor editor = new Editor(level, tileSet, 16, 16);
+        //TileDisplay a = new TileDisplay(level, tileSet, 500, 500, 1000, 1000, 32);
+
+        Editor editor = new Editor(level, tileSet, new Dimension(500, 100), new Dimension(100, 100));
+
     }
 
     public static String generateLevelFromTileSet(TileSet tileSet) {
-        System.out.println(tileSet.getWidth() + " " + tileSet.getHeight());
         return generateLevel(tileSet.getWidth(), tileSet.getHeight());
     }
 
@@ -37,14 +45,14 @@ public class Main {
                 res+=currentTile+":0:0:0,";
                 ++currentTile;
             }
-            res = res.substring(0, res.length()-1)+";\n";
+            res = res.substring(0, res.length()-1)+";";
         }
 
-        return res;
+        return res.substring(0,res.length()-1);
     }
 
     public static void writeLevelToFile(String levelDir) {
-        Level level = new Level(levelDir);
+        Level level = new Level(levelDir, true);
 
         String levelContent ="";
 
@@ -52,7 +60,7 @@ public class Main {
             for (int x = 0; x < level.getWidth(); x++) {
                 levelContent += level.getInfo(x,y) + ",";
             }
-            levelContent=levelContent.substring(0, levelContent.length()-1) + ";\n";
+            levelContent=levelContent.substring(0, levelContent.length()-1) + ";";
         }
 
         writeToFile(levelDir, levelContent);

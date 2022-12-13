@@ -27,12 +27,14 @@ public class Listener implements KeyListener, MouseListener, MouseWheelListener 
 
     private final ExtendableThread runner = new ExtendableThread() {
         @Override public void execute() {
-            keyBinds.forEach((key, action) -> {if (keyStates.containsKey(key)&&keyStates.get(key).get()) {action.run();}});
-            mouseBinds.forEach((button, action) -> {if (mouseStates.containsKey(button)&&mouseStates.get(button).get()) {action.run();}});
+            keyBinds.forEach((key, action) -> {if (keyStates.get(key).get()) {action.run();}});
+            mouseBinds.forEach((button, action) -> {if (mouseStates.get(button).get()) {action.run();}});
             pause(actionDelay);
         }
 
-        @Override public boolean waitCondition() {return mouseNotPressed()&&keysNotPressed();}
+        @Override public boolean waitCondition() {
+            return mouseNotPressed()&&keysNotPressed();
+        }
     };
 
     private final int actionDelay;
@@ -44,14 +46,14 @@ public class Listener implements KeyListener, MouseListener, MouseWheelListener 
     @Override public void mousePressed(MouseEvent e) {
         if (mousePressBinds.containsKey(e.getButton())) {mousePressBinds.get(e.getButton()).run();}
         if (mouseStates.containsKey(e.getButton())) {mouseStates.get(e.getButton()).set(true);}
-        if (mouseNotPressed()&&keysNotPressed()) {runner.restart();}
+        runner.restart();
     }
 
     /** in order, run on-press code, set key state, then start while op */
     @Override public void keyPressed(KeyEvent e) {
         if (keyPressBinds.containsKey(e.getExtendedKeyCode())) {keyPressBinds.get(e.getExtendedKeyCode()).run();}
         if (keyStates.containsKey(e.getExtendedKeyCode())) {keyStates.get(e.getExtendedKeyCode()).set(true);}
-        if (mouseNotPressed()&&keysNotPressed()) {runner.restart();}
+        runner.restart();
     }
 
     /** in order, run on-release code, then set button state*/
@@ -78,19 +80,19 @@ public class Listener implements KeyListener, MouseListener, MouseWheelListener 
     public boolean keysNotPressed()  {return !keyStates.containsValue(new BoolWrapper(true));}
 
     /** add an action associated with a key */
-    public void addKeyBind(int keyCode, Runnable action) {keyBinds.put(keyCode, action); if(keyStates.containsKey(keyCode)){keyStates.put(keyCode, new BoolWrapper(false));}}
+    public void addKeyBind(int keyCode, Runnable action) {keyBinds.put(keyCode, action); if(!keyStates.containsKey(keyCode)){keyStates.put(keyCode, new BoolWrapper(false));}}
     /** add an action associated with a mouse button */
-    public void addMouseBind(int button, Runnable action) {mouseBinds.put(button, action); if(mouseStates.containsKey(button)){mouseStates.put(button, new BoolWrapper(false));}}
+    public void addMouseBind(int button, Runnable action) {mouseBinds.put(button, action); if(!mouseStates.containsKey(button)){mouseStates.put(button, new BoolWrapper(false));}}
 
     /** add a release action associated with a key */
-    public void addKeyReleaseBind(int keyCode, Runnable action) {keyReleaseBinds.put(keyCode, action); if(keyStates.containsKey(keyCode)){keyStates.put(keyCode, new BoolWrapper(false));}}
+    public void addKeyReleaseBind(int keyCode, Runnable action) {keyReleaseBinds.put(keyCode, action); if(!keyStates.containsKey(keyCode)){keyStates.put(keyCode, new BoolWrapper(false));}}
     /** add a release action associated with a mouse button */
-    public void addMouseReleaseBind(int button, Runnable action) {mouseReleaseBinds.put(button, action); if(mouseStates.containsKey(button)){mouseStates.put(button, new BoolWrapper(false));}}
+    public void addMouseReleaseBind(int button, Runnable action) {mouseReleaseBinds.put(button, action); if(!mouseStates.containsKey(button)){mouseStates.put(button, new BoolWrapper(false));}}
 
     /** add a release action associated with a key */
-    public void addKeyPressBind(int keyCode, Runnable action) {keyPressBinds.put(keyCode, action); if(keyStates.containsKey(keyCode)){keyStates.put(keyCode, new BoolWrapper(false));}}
+    public void addKeyPressBind(int keyCode, Runnable action) {keyPressBinds.put(keyCode, action); if(!keyStates.containsKey(keyCode)){keyStates.put(keyCode, new BoolWrapper(false));}}
     /** add a release action associated with a mouse button */
-    public void addMousePressBind(int button, Runnable action) {mousePressBinds.put(button, action); if(mouseStates.containsKey(button)){mouseStates.put(button, new BoolWrapper(false));}}
+    public void addMousePressBind(int button, Runnable action) {mousePressBinds.put(button, action); if(!mouseStates.containsKey(button)){mouseStates.put(button, new BoolWrapper(false));}}
 
     /** boolean wrapper with equals override for bool value */
     private static class BoolWrapper {

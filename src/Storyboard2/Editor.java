@@ -1,6 +1,8 @@
 package Storyboard2;
 
+import Storyboard2.Core.Level;
 import Storyboard2.Core.TileDisplay;
+import Storyboard2.Core.TileSet;
 import Storyboard2.Utils.Listener;
 import Storyboard2.Utils.MouseFollower;
 
@@ -10,12 +12,13 @@ import java.awt.event.KeyEvent;
 import java.awt.event.MouseEvent;
 
 public class Editor extends JFrame {
-    private final TileDisplay displayRef;
+    private TileDisplay levelDisplay, tileSetDisplay;
 
     private boolean scalingWidth = false;
 
-    public Editor(TileDisplay displayRef) {
-        this.displayRef = displayRef;
+    public Editor(Level level, TileSet tileSet, Dimension levelDisplayDim, Dimension tileSetDisplayDim) {
+        levelDisplay = new TileDisplay(level, tileSet, 100, 100, levelDisplayDim.width, levelDisplayDim.height, tileSet.getTileOutputSize());
+        tileSetDisplay = new TileDisplay(new Level(Main.generateLevelFromTileSet(tileSet), false), tileSet,100,100, tileSetDisplayDim.width, tileSetDisplayDim.height, tileSet.getTileOutputSize());
 
         setUndecorated(true);
 
@@ -23,65 +26,76 @@ public class Editor extends JFrame {
 
         MouseFollower<Editor> follower = new MouseFollower<>(this);
 
-        l.addMousePressBind(MouseEvent.BUTTON1, () -> {
-            requestFocus();
-            follower.startFollowing();
-        });
+        l.addMousePressBind(MouseEvent.BUTTON1, () -> {System.out.println("-----begin-----"); requestFocus();});
+        l.addMouseReleaseBind(MouseEvent.BUTTON1, () -> {System.out.println("-----end-----"); requestFocus();});
+        l.addMouseBind(MouseEvent.BUTTON1, () -> {System.out.println("BRUH");});
 
-        l.addMouseReleaseBind(MouseEvent.BUTTON1, follower::stopFollowing);
+        addKeyListener(l);
 
-        l.addKeyBind(KeyEvent.VK_ESCAPE, () -> System.exit(0));
-        l.addKeyBind(KeyEvent.VK_SPACE , () -> scalingWidth = !scalingWidth);
-        l.addKeyBind(KeyEvent.VK_SLASH , () -> displayRef.setCameraPos(0,0));
+        //l.addMousePressBind(MouseEvent.BUTTON1, () -> {
+        //    requestFocus();
+        //    follower.startFollowing();
+        //});
+        //
+        //l.addMouseReleaseBind(MouseEvent.BUTTON1, ()-> {
+        //    follower.stopFollowing();
+        //    System.out.println("tes");
+        //});
+        //
+        //l.addKeyBind(KeyEvent.VK_ESCAPE, () -> {
+        //    System.out.println("aaaa");
+        //    System.exit(0);
+        //});
+        //l.addKeyBind(KeyEvent.VK_SPACE , () -> scalingWidth = !scalingWidth);
+        //
+        //l.addKeyBind(KeyEvent.VK_LEFT , () -> levelDisplay.animateCameraLoc(-16,   0, 100, 0));
+        //l.addKeyBind(KeyEvent.VK_RIGHT, () -> levelDisplay.animateCameraLoc( 16,   0, 100, 0));
+        //l.addKeyBind(KeyEvent.VK_UP   , () -> levelDisplay.animateCameraLoc(  0, -16, 100, 0));
+        //l.addKeyBind(KeyEvent.VK_DOWN , () -> levelDisplay.animateCameraLoc(  0,  16, 100, 0));
 
-        l.addKeyBind(KeyEvent.VK_LEFT , () -> displayRef.animateCamera(-1, 0,100, 0, false));
-        l.addKeyBind(KeyEvent.VK_RIGHT, () -> displayRef.animateCamera( 1, 0,100, 0, false));
-        l.addKeyBind(KeyEvent.VK_UP   , () -> displayRef.animateCamera( 0,-1,100, 0, false));
-        l.addKeyBind(KeyEvent.VK_DOWN , () -> displayRef.animateCamera( 0, 1,100, 0, false));
-
-        l.addKeyBind(KeyEvent.VK_PAGE_UP, () -> {
-            displayRef.redefine(
-                    displayRef.getDisplayedTilesX()+(scalingWidth?(displayRef.getDisplayedTilesX()-1>0?-1:0):0),
-                    displayRef.getDisplayedTilesY()+(scalingWidth?0:(displayRef.getDisplayedTilesY()-1>0?-1:0)),
-                    displayRef.getTileSize()
-            );
-            displayRef.nextFrame();
-
-            pack();
-
-            try {
-                Thread.sleep(100);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-        });
-        l.addKeyBind(KeyEvent.VK_PAGE_DOWN, () -> {
-            displayRef.redefine(
-                    displayRef.getDisplayedTilesX()+(scalingWidth?1:0),
-                    displayRef.getDisplayedTilesY()+(scalingWidth?0:1),
-                    displayRef.getTileSize()
-            );
-            displayRef.nextFrame();
-
-            pack();
-
-            try {
-                Thread.sleep(100);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-        });
+        //l.addKeyBind(KeyEvent.VK_PAGE_UP, () -> {
+        //    mainDisplay.redefine(
+        //            mainDisplay.getDisplayedTilesX()+(scalingWidth?(mainDisplay.getDisplayedTilesX()-1>0?-1:0):0),
+        //            mainDisplay.getDisplayedTilesY()+(scalingWidth?0:(mainDisplay.getDisplayedTilesY()-1>0?-1:0)),
+        //            mainDisplay.getTileSize()
+        //    );
+        //    mainDisplay.nextFrame();
+        //
+        //    pack();
+        //
+        //    try {
+        //        Thread.sleep(100);
+        //    } catch (InterruptedException e) {
+        //        e.printStackTrace();
+        //    }
+        //});
+        //l.addKeyBind(KeyEvent.VK_PAGE_DOWN, () -> {
+        //    mainDisplay.redefine(
+        //            mainDisplay.getDisplayedTilesX()+(scalingWidth?1:0),
+        //            mainDisplay.getDisplayedTilesY()+(scalingWidth?0:1),
+        //            mainDisplay.getTileSize()
+        //    );
+        //    mainDisplay.nextFrame();
+        //
+        //    pack();
+        //
+        //    try {
+        //        Thread.sleep(100);
+        //    } catch (InterruptedException e) {
+        //        e.printStackTrace();
+        //    }
+        //});
 
         addKeyListener(l);
         addMouseListener(l);
 
         setLayout(new BorderLayout());
 
-        add(new Menu(216, 16, (g, host) -> {
-            g.fillRect(0,0,216,16);
-            host.repaint();
-        }), BorderLayout.PAGE_START);
-        add(displayRef,BorderLayout.LINE_START);
+        add(new Menu(216, 16, (g, host) -> {g.fillRect(0,0,216,16); host.repaint();}), BorderLayout.PAGE_START);
+        add(levelDisplay, BorderLayout.LINE_START);
+        add(tileSetDisplay, BorderLayout.LINE_END);
+        add(new Menu(216, 48, (g, host) -> {g.fillRect(0,0, 216, 48); host.repaint();}), BorderLayout.PAGE_END);
+
         pack();
 
         
