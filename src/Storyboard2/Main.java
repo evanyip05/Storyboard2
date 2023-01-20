@@ -1,12 +1,11 @@
 package Storyboard2;
 
-import Storyboard2.Core.*;
+import Storyboard2.Core.Level;
+import Storyboard2.Core.TileSet;
+import Storyboard2.Utils.ExtendableThread;
+import Storyboard2.Utils.TextFile;
 
-import java.awt.*;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.nio.file.Path;
-import java.util.Scanner;
+import java.util.function.Consumer;
 
 public class Main {
 
@@ -14,13 +13,12 @@ public class Main {
 
     public static void main(String[] args) {
         TileSet tileSet = new TileSet("./Files/breadboard.png", tileSize, 32);
-        Level level = new Level("./Files/test.txt", true);
+        TextFile file = new TextFile("./Files/test.txt");
+        Level level = new Level(file.readContent());
 
-        Editor editor = new Editor(level, tileSet, new Dimension(700, 500), new Dimension(240, 480));
+        Consumer<ExtendableThread> action = thread -> System.out.println("aaa");
 
-        //writeToFile("./Files/test.txt", generateLevelFromTileSet(tileSet));
 
-        editor.doRandomAnimation(false);
     }
 
     public static String generateLevelFromTileSet(TileSet tileSet) {return generateLevel(tileSet.getWidth(), tileSet.getHeight());}
@@ -39,8 +37,7 @@ public class Main {
         return res.substring(0,res.length()-1);
     }
 
-    public static void writeLevelToFile(String levelDir) {
-        Level level = new Level(levelDir, true);
+    public static void writeLevelToFile(Level level, String levelDir) {
 
         String levelContent ="";
 
@@ -51,24 +48,7 @@ public class Main {
             levelContent=levelContent.substring(0, levelContent.length()-1) + ";\n";
         }
 
-        writeToFile(levelDir, levelContent);
+        new TextFile(levelDir).writeContent(levelContent);
     }
 
-    /** returns string from a text file using a directory, returns an empty string if read fails*/
-    public static String fileToString(String dir) {
-        String res = "";
-
-        try {
-            Scanner reader = new Scanner(Path.of(dir));
-            while (reader.hasNext()) {res = res + reader.nextLine();}
-            return res;
-        }
-        catch (IOException e) {System.out.println("file did not exist or could not read"); return res;}
-    }
-
-    /** overwrite a file with a string*/
-    public static void writeToFile(String dir, String content) {
-        try {FileWriter writer = new FileWriter(dir); writer.write(content); writer.close();}
-        catch (IOException e) {System.out.println("file does not exist or could not write");}
-    }
 }

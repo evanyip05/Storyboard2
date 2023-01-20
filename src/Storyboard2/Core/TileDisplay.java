@@ -1,21 +1,24 @@
 package Storyboard2.Core;
 
+import Storyboard2.Utils.ExtendableThread;
 import Storyboard2.Utils.SynchronousSequence;
 
-import javax.swing.*;
 import java.awt.*;
 import java.awt.image.BufferedImage;
+import java.util.function.Consumer;
 
-public class TileDisplay extends JPanel {
+/** NOT A CONTAINER, meant to be added to a container */
+public class TileDisplay extends Component {
     private final SynchronousSequence animationSequence;
     private final Dimension displaySize;
     private final Rectangle cam;
-    private final TileSet tileSet;
     private final Point projection;
-    private final Level level;
-    private final Image image;
 
-    private final int tileSize;
+    private TileSet tileSet;
+    private Image image;
+    private Level level;
+
+    private int tileSize;
 
     public TileDisplay(Level level, TileSet tileSet, int camWidth, int camHeight, int displayWidth, int displayHeight, int tileSize) {
         this.tileSize = tileSize;
@@ -47,19 +50,35 @@ public class TileDisplay extends JPanel {
         return res;
     }
 
-    @Override public void paint(Graphics g) {
-        g.clearRect(0,0, displaySize.width, displaySize.height);
-        g.drawImage(image,
-                projection.x, projection.y, (projection.x+cam.width), (projection.y+cam.height),
-                cam.x       , cam.y       , (cam.x+cam.width)       , (cam.y+cam.height)       , (null)
-        );
+    public int getCamX() {return cam.x;}
+    public int getCamY() {return cam.y;}
+    public int getCamWidth() {return cam.width;}
+    public int getCamHeight() {return cam.height;}
+    public int getDisplayWidth() {return displaySize.width;}
+    public int getDisplayHeight() {return displaySize.height;}
+    public int getProjectionX() {return projection.x;}
+    public int getProjectionY() {return projection.y;}
+
+    // resizing methods
+    public void reConstruct(int camWidth, int camHeight, int displayWidth, int displayHeight, int tileSize) {reConstruct(level, tileSet, camWidth, camHeight, displayWidth, displayHeight, tileSize);}
+    public void reConstruct(Level level, TileSet tileSet) {reConstruct(level, tileSet, cam.width, cam.height, displaySize.width, displaySize.height, tileSize);}
+    public void reConstruct(Level level, TileSet tileSet, int camWidth, int camHeight, int displayWidth, int displayHeight, int tileSize) {
+        this.tileSize = tileSize;
+        this.tileSet = tileSet;
+        this.image = generateImage();
+        this.level = level;
+
+        displaySize.setSize(displayWidth, displayHeight);
+        cam.setSize(camWidth, camHeight);
+
+        setSize(displaySize);
+        setPreferredSize(displaySize);
     }
 
-    public SynchronousSequence.SynchronousExecutable getCameraAnimation(int finalCamLocX, int finalCamLocY, int finalProjectionLocX, int finalProjectionLocY, int finalCamWidth, int finalCamHeight, int animationMillis, int postMillis) {return getCameraAnimation(new Point(finalCamLocX, finalCamLocY), new Point(finalProjectionLocX, finalProjectionLocY), new Dimension(finalCamWidth, finalCamHeight), animationMillis, postMillis);}
-    public SynchronousSequence.SynchronousExecutable getCameraAnimation(Point finalCamLoc, Point finalProjectionLoc, Dimension finalCamSize, int animationMillis, int postMillis) {
+    // returns a composed movement for the camera to be played
+    private Consumer<ExtendableThread> getCameraAnimation(Point finalCamLoc, Point finalProjectionLoc, Dimension finalCamSize, int animationMillis, int postMillis) {
         return thread -> {
             int animationAcceleration = 16, finalAnimationMillis = Math.max(animationMillis, animationAcceleration);
-            //int totalDroppedFrames = 0;
 
             // totals
             double totalCamDistX = cam.x, totalCamDistY = cam.y;
@@ -97,8 +116,6 @@ public class TileDisplay extends JPanel {
                 // time action
                 long moveTotalTime = System.currentTimeMillis() - moveStartTime;
 
-                //System.out.println(moveTotalTime);
-
                 // calculate time error
                 accumulatedTimeError += moveTotalTime - targetTime;
                 if (accumulatedTimeError >= targetTime) {
@@ -126,45 +143,26 @@ public class TileDisplay extends JPanel {
             repaint();
 
             if (postMillis > 0) {thread.pause(postMillis);}
-
-            //System.out.println(totalDroppedFrames + " frames dropped");
         };
     }
 
-    public void animateCameraProjection(Point finalLoc, int animationTime, int postTime) {
-        if (animationSequence.notRunning()) {
-            animationSequence.setActionSequence(getCameraAnimation(cam.getLocation(), finalLoc, cam.getSize(), animationTime, postTime));
-            animationSequence.run();
-        }
-    }
-    public void animateCameraLoc(int dx, int dy, int animationTime, int postTime) {
-        if (animationSequence.notRunning()) {
-            animationSequence.setActionSequence(getCameraAnimation(new Point(cam.x+dx, cam.y+dy), projection, cam.getSize(), animationTime, postTime));
-            animationSequence.run();
-        }
-    }
-    public void animateCameraFrame(Point finalLoc, int animationTime, int postTime) {
-        if (animationSequence.notRunning()) {
-            animationSequence.setActionSequence(getCameraAnimation(finalLoc, finalLoc, cam.getSize(), animationTime, postTime));
-            animationSequence.run();
-        }
-    }
-    public void animateCameraDimension(Dimension finalDim, int animationTime, int postTime) {
-        if (animationSequence.notRunning()) {
-            animationSequence.setActionSequence(getCameraAnimation(cam.getLocation(), projection, finalDim, animationTime, postTime));
-            animationSequence.run();
-        }
-    }
     public void animateCamera(Point finalCamLoc, Point finalProjectionLoc, Dimension finalDim, int animationTime, int postTime) {
         if (animationSequence.notRunning()) {
             animationSequence.setActionSequence(getCameraAnimation(finalCamLoc, finalProjectionLoc, finalDim, animationTime, postTime));
             animationSequence.run();
         }
     }
-    public void animateCamera(SynchronousSequence.SynchronousExecutable... animations) {
-        if (animationSequence.notRunning()) {
-            animationSequence.setActionSequence(animations);
-            animationSequence.run();
-        }
+    public void animateCameraProjection(Point finalLoc, int animationTime, int postTime) {animateCamera(cam.getLocation(), finalLoc, cam.getSize(), animationTime, postTime);}
+    public void animateCameraLoc(int dx, int dy, int animationTime, int postTime) {animateCamera(new Point(cam.x+dx, cam.y+dy), projection, cam.getSize(), animationTime, postTime);}
+    public void animateCameraFrame(Point finalLoc, int animationTime, int postTime) {animateCamera(finalLoc, finalLoc, cam.getSize(), animationTime, postTime);}
+    public void animateCameraDimension(Dimension finalDim, int animationTime, int postTime) {animateCamera(cam.getLocation(), projection, finalDim, animationTime, postTime);}
+
+    // paint camera rect to component
+    @Override public void paint(Graphics g) {
+        g.clearRect(0,0, displaySize.width, displaySize.height);
+        g.drawImage(image,
+                projection.x, projection.y, (projection.x+cam.width), (projection.y+cam.height),
+                cam.x       , cam.y       , (cam.x+cam.width)       , (cam.y+cam.height)       , (null)
+        );
     }
 }

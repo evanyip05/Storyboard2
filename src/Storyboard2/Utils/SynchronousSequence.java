@@ -3,44 +3,37 @@ package Storyboard2.Utils;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.function.Consumer;
 
 public class SynchronousSequence {
-    private final ArrayList<SynchronousExecutable> actionSequence = new ArrayList<>();
+    private final ArrayList<Consumer<ExtendableThread>> actionSequence = new ArrayList<>();
     private final ExtendableThread executor = new ExtendableThread() {
-        @Override public void execute() {action.execute(executor);}
+        @Override public void execute() {action.accept(executor);}
         @Override public boolean waitCondition() {return !running;}
     };
 
-    private SynchronousExecutable action = thread -> {};
+    private Consumer<ExtendableThread> action = thread -> {};
 
     private boolean running = false;
 
     public boolean notRunning() {return !running;}
 
-    public void setActionSequence(SynchronousExecutable... actionSequence) {
-        if (!running) {
-            this.actionSequence.clear(); this.actionSequence.addAll(Arrays.asList(actionSequence));
-        }
-    }
     public void run() {
-        if (!running) {
-            action = ((SynchronousExecutable) thread -> running = true).compose(actionSequence).andThen(thread -> running = false);
-            executor.restart();
-        }
+        if (!running) {action = composeActions(thread -> running = true, composeActions(actionSequence), thread -> running = false);executor.restart();}
     }
-
-    public interface SynchronousExecutable {
-        void execute(ExtendableThread thread);
-        default SynchronousExecutable andThen(SynchronousExecutable after) {return thread1 -> {execute(thread1);after.execute(thread1);};}
-        default SynchronousExecutable compose(List<SynchronousExecutable> actions) {
-            SynchronousExecutable res = this;
-            for (SynchronousExecutable action : actions) {res = res.andThen(action);}
-            return res;
-        }
-        default SynchronousExecutable compose(SynchronousExecutable... actions) {
-            SynchronousExecutable res = this;
-            for (SynchronousExecutable action : actions) {res = res.andThen(action);}
-            return res;
-        }
+    @SafeVarargs // had warnings for this, not sure what this is, dont see ways it could go wrong
+    public final void setActionSequence(Consumer<ExtendableThread>... actionSequence) {
+        if (!running) {this.actionSequence.clear(); this.actionSequence.addAll(Arrays.asList(actionSequence));}
+    }
+    @SafeVarargs // had warnings for this, not sure what this is, dont see ways it could go wrong
+    public final Consumer<ExtendableThread> composeActions(Consumer<ExtendableThread>... actions) {
+        Consumer<ExtendableThread> res = thread -> {};
+        for (Consumer<ExtendableThread> action : actions) {res = res.andThen(action);}
+        return res;
+    }
+    public Consumer<ExtendableThread> composeActions(List<Consumer<ExtendableThread>> actions) {
+        Consumer<ExtendableThread> res = thread -> {};
+        for (Consumer<ExtendableThread> action : actions) {res = res.andThen(action);}
+        return res;
     }
 }

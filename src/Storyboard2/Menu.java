@@ -1,11 +1,9 @@
 package Storyboard2;
 
-import javax.swing.*;
 import java.awt.*;
 import java.util.function.BiConsumer;
-import java.util.function.Consumer;
 
-public class Menu extends JPanel {
+public class Menu extends Component {
 
     private final BiConsumer<Graphics, Component> draw;
 
@@ -18,8 +16,5 @@ public class Menu extends JPanel {
         setPreferredSize(d);
     }
 
-    @Override
-    public void paint(Graphics g) {
-        draw.accept(g, this);
-    }
+    @Override public void paint(Graphics g) {draw.accept(g, this);}
 }

@@ -1,11 +1,9 @@
 package Storyboard2.Core;
 
-import java.awt.*;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.util.HashMap;
+import Storyboard2.Utils.TextFile;
 
-import static Storyboard2.Main.fileToString;
+import java.awt.*;
+import java.util.HashMap;
 
 /**
  * interface to a level text file <br>
@@ -18,29 +16,29 @@ public class Level {
     private final int width, height;
 
     /** level from existing data */
-    public Level(String info, boolean isDir) {
-        String levelData = isDir?fileToString(info):info;
-
-        width = levelData.split("[;]")[0].split("[,]").length;
-        height = levelData.split("[;]").length;
+    public Level(String info) {
+        width = info.split("[;]")[0].split("[,]").length;
+        height = info.split("[;]").length;
 
         for (int y = 0; y < height; ++y) {
             for (int x = 0; x < width; ++x) {
-                infoMap.put(new Point(x, y), levelData.split("[;]")[y].split("[,]")[x].replaceAll("[\\s]+", ""));
+                infoMap.put(new Point(x, y), info.split("[;]")[y].split("[,]")[x].replaceAll("[\\s]+", ""));
             }
         }
     }
+
+
+    /** width in tiles */
+    public int getWidth() {return width;}
+    /** height in tiles */
+    public int getHeight() {return height;}
 
     /** gets tile in map, empty tile if missing */
     public String getInfo(int levelX, int levelY) {
         String res = infoMap.get(new Point(levelX, levelY));
         return (res==null)?"0:0:0:0":res;
     }
-    /** width in tiles */
-    public int getWidth() {return width;}
-    /** height in tiles */
-    public int getHeight() {return height;}
-    
+
     /** changes tile info in map */
     public void editInfo(int levelX, int levelY, String replace) {
         Point target = new Point(levelX, levelY);
@@ -54,13 +52,10 @@ public class Level {
         String content = "";
         
         for (int y = 0; y < getHeight(); y++) {
-            for (int x = 0; x < getWidth(); x++) {
-                content += getInfo(x,y) + ",";
-            }
+            for (int x = 0; x < getWidth(); x++) {content += getInfo(x,y) + ",";}
             content=content.substring(0, content.length()-1) + ";";
         }
 
-        try {FileWriter writer = new FileWriter(dir); writer.write(content); writer.close();}
-        catch (IOException e) {System.out.println("file does not exist or could not write");}
+        new TextFile(dir).writeContent(content);
     }
 }
