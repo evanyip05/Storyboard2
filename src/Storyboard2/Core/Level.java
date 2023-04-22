@@ -17,12 +17,12 @@ public class Level {
 
     /** level from existing data */
     public Level(String info) {
-        width = info.split("[;]")[0].split("[,]").length;
-        height = info.split("[;]").length;
+        width = info.split(";")[0].split(",").length;
+        height = info.split(";").length;
 
-        for (int y = 0; y < height; ++y) {
-            for (int x = 0; x < width; ++x) {
-                infoMap.put(new Point(x, y), info.split("[;]")[y].split("[,]")[x].replaceAll("[\\s]+", ""));
+        for (int y = 0; y < height-1; ++y) {
+            for (int x = 0; x < width-1; ++x) {
+                infoMap.put(new Point(x, y), info.split(";")[y].split(",")[x].replaceAll("\\s+", ""));
             }
         }
     }
@@ -42,10 +42,8 @@ public class Level {
     /** changes tile info in map */
     public void editInfo(int levelX, int levelY, String replace) {
         Point target = new Point(levelX, levelY);
-        if (infoMap.containsKey(target)) {
-            infoMap.remove(target);
-            infoMap.put(target, replace);
-        }
+        infoMap.remove(target);
+        infoMap.put(target, replace);
     }
     
     public void writeLevelToFile(String dir) {

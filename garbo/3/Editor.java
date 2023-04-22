@@ -32,10 +32,12 @@ public class Editor extends JFrame {
         l.addKeyBind(KeyEvent.VK_ESCAPE, () -> System.exit(0));
         l.addKeyBind(KeyEvent.VK_SPACE , () -> scalingWidth = !scalingWidth);
 
+        /*
         l.addKeyBind(KeyEvent.VK_LEFT , () -> levelDisplay.animateCameraLoc(-tileSet.getTileOutputSize(),   0, 100, 0));
         l.addKeyBind(KeyEvent.VK_RIGHT, () -> levelDisplay.animateCameraLoc( tileSet.getTileOutputSize(),   0, 100, 0));
         l.addKeyBind(KeyEvent.VK_UP   , () -> levelDisplay.animateCameraLoc(  0, -tileSet.getTileOutputSize(), 100, 0));
         l.addKeyBind(KeyEvent.VK_DOWN , () -> levelDisplay.animateCameraLoc(  0,  tileSet.getTileOutputSize(), 100, 0));
+         */
 
         l.addKeyBind(KeyEvent.VK_PAGE_DOWN, () -> {
             levelDisplay.reConstruct(levelDisplay.getCamWidth(), levelDisplay.getCamHeight(),levelDisplay.getDisplayWidth()+1, levelDisplay.getDisplayHeight()+1,tileSet.getTileOutputSize());

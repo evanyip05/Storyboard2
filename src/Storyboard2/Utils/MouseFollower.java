@@ -1,8 +1,6 @@
 package Storyboard2.Utils;
 
 import java.awt.*;
-import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.Consumer;
 
 /** class that moves some moveable subclass with the mouse pointer */
 public class MouseFollower<E extends Component> extends ExtendableThread {
@@ -14,7 +12,7 @@ public class MouseFollower<E extends Component> extends ExtendableThread {
     public MouseFollower(E target) {this.target = target;}
 
     // follow code
-    @Override public void execute() throws InterruptedException {
+    @Override public void task() throws InterruptedException {
         Point cursor = MouseInfo.getPointerInfo().getLocation();
         int mDeltaX = (int) (cursor.getX()-mouseInital.getX());
         int mDeltaY = (int) (cursor.getY()-mouseInital.getY());
@@ -24,11 +22,12 @@ public class MouseFollower<E extends Component> extends ExtendableThread {
         }
 
         mouseInital.setLocation(cursor);
-        wait(16);
-    }
+        this.wait(16);
 
-    // when to follow condition used to tell the extendable thread when to wait and not execute follow code
-    @Override public boolean waitCondition() {return !following;}
+        if (!following) {
+            this.wait();
+        }
+    }
 
     /** change the target */
     public void setTarget(E target) {this.target = target;}

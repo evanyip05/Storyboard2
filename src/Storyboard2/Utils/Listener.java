@@ -26,14 +26,14 @@ public class Listener implements KeyListener, MouseListener, MouseWheelListener 
     private final HashMap<Integer, BoolWrapper> mouseStates = new HashMap<>();
 
     private final ExtendableThread runner = new ExtendableThread() {
-        @Override public void execute() {
+        @Override public void task() throws InterruptedException {
             keyBinds.forEach((key, action) -> {if (keyStates.get(key).get()) {action.run();}});
             mouseBinds.forEach((button, action) -> {if (mouseStates.get(button).get()) {action.run();}});
-            pause(actionDelay);
-        }
+            this.wait(actionDelay);
 
-        @Override public boolean waitCondition() {
-            return mouseNotPressed()&&keysNotPressed();
+            if (mouseNotPressed()&&keysNotPressed()) {
+                this.wait();
+            }
         }
     };
 

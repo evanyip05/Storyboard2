@@ -4,72 +4,33 @@ package Storyboard2.Utils;
   * restartable using wait/notify syncing, usually used through anon declarations */
 public abstract class ExtendableThread extends Thread {
 
-    /**
-     * run loop sync block to lock this thread to this action (only so the lock isnt lost)
-     * runs while bool from condition is true
-     * does execute method then checks if it should wait
-     */
+    /** run loop sync block to lock this thread to this action (only so the lock isnt lost)
+     *  runs while bool from condition is true
+     *  does execute method then checks if it should wait */
     @Override
     public final void run() {
         synchronized (this) {
-            while (condition()) {
-                try {
-                    execute();
-                    if (waitCondition()) {
-                        wait();
-                    }
-                } catch (InterruptedException ignore) {
-                }
+            while (shouldRun()) {
+                try {task();}
+                catch (InterruptedException ignore) {}
             }
         }
+        System.out.println("thread died");
     }
 
-    /**
-     * process that happens if a thread is to be restarted
-     */
+    /** process that happens if a thread is to be restarted */
     public final void restart() {
         synchronized (this) {
-            if (getState().equals(State.NEW)) {
-                start();
-            }
-            executeOnRestart();
-            notify();
+            if (getState().equals(State.NEW)) {start();}
+            else {notify();}
         }
     }
 
-    /**
-     * wrapped wait
-     */
-    public final void pause(long ms) {
-        try {
-            wait(ms);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-    }
+    /** task this thread performs. thread param is to give access to this thread w/o decloration */
+    public abstract void task() throws InterruptedException;
 
-    /**
-     * default code block to be run when the thread resumes, can be overridden
-     */
-    public void executeOnRestart() {
-    }
-
-    /**
-     * default condition for which the thread should pause, can be overridden
-     */
-    public boolean waitCondition() {
-        return false;
-    }
-
-    /**
-     * the condition on which the thread should keep performing the task
-     */
-    public boolean condition() {
-        return true;
-    }
-
-    /**
-     * task this thread performs
-     */
-    public abstract void execute() throws InterruptedException;
+    /** the condition on which the thread should keep performing the task */
+    public boolean shouldRun() {return true;}
 }
+
+
