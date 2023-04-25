@@ -13,7 +13,7 @@ public class TileDisplay extends Component {
     private Image image;
     private Level level;
 
-    private final Queue animations = new Queue();
+    private final Queue animations = new Queue(1);
 
     private int tileSize;
 
@@ -22,7 +22,7 @@ public class TileDisplay extends Component {
         this.tileSet = tileSet;
         this.level = level;
 
-        image = generateImage();
+        image = generateImage(level.getWidth()*tileSize, level.getHeight()*tileSize);
         camera = new Rectangle(width, height);
         projection = new Rectangle(width, height);
 
@@ -32,28 +32,40 @@ public class TileDisplay extends Component {
         animations.restart();
     }
 
-    public BufferedImage generateImage() {
-        BufferedImage res = new BufferedImage(level.getWidth()*tileSize, level.getHeight()*tileSize, BufferedImage.TRANSLUCENT);
+    public BufferedImage generateImage(int width, int height) {
+        BufferedImage res = new BufferedImage(width, height, BufferedImage.TRANSLUCENT);
         Graphics g = res.getGraphics();
 
-        for (int y = 0; y < level.getHeight()-1; y++) {
-            for (int x = 0; x < level.getWidth()-1; x++) {
-               g.drawImage(tileSet.getTileImage(Integer.parseInt(level.getInfo(x,y).split(":")[0])), x*tileSize, y*tileSize, null);
+        for (int y = 0; y < level.getHeight(); y++) {
+            for (int x = 0; x < level.getWidth(); x++) {
+                g.drawImage(tileSet.getTileImage(Integer.parseInt(level.getInfo(x,y).split(":")[0].strip())), x*tileSize, y*tileSize, null);
             }
         }
+
         return res;
     }
 
-    public void zoom(int px, int duration) {
-        animateCamera(px/2,px/2,0,0,-px,-px,0,0,duration);
+    public void rescale(int dw, int dh, int duration) {
+        animateCamera(0,0,0,0,dw,dh,dw,dh,duration);
     }
 
-    public void pan(int dx, int dy, int duration) {
+    // add: cant zoom out further than the biggest dimension of the map
+    public void zoom(int px, int duration) {
+        if (camera.height>tileSize||px<0) {
+            animateCamera(px, px, 0, 0, -2 * px, -2 * px, 0, 0, duration);
+        }
+    }
+
+    public void panProjection(int dx, int dy, int duration) {
+        animateCamera(0,0,dx,dy,0,0,0,0,duration);
+    }
+
+    public void panCamera(int dx, int dy, int duration) {
         animateCamera(dx,dy,0,0,0,0,0,0,duration);
     }
 
-    public void setLevel(Level level) {this.level = level; image = generateImage();}
-    public void setTileSet(TileSet tileSet) {this.tileSet = tileSet; this.tileSize = tileSet.getTileOutputSize(); image = generateImage();}
+    public void setLevel(Level level) {this.level = level; image = generateImage(level.getWidth()*tileSize, level.getHeight()*tileSize);}
+    public void setTileSet(TileSet tileSet) {this.tileSet = tileSet; this.tileSize = tileSet.getTileOutputSize(); image = generateImage(level.getWidth()*tileSize, level.getHeight()*tileSize);}
 
     @Override
     public void paint(Graphics g) {
@@ -67,16 +79,17 @@ public class TileDisplay extends Component {
     }
 
 
-
-
-
-
     // need to modify to check new cam coords after each animation
     // basically put call to call inline, have it make that call, so ther other call has to wait, then when it does get called, it will read the changed data
     // when intially called, need to check if there are other requests to do animations before it
-    private void animateCamera(int camDx, int camDy, int projectDx, int projectDy, int camDw, int camDh, int projectDw, int projectDh, int duration) {
+    public void animateCamera(int camDx, int camDy, int projectionDx, int projectionDy, int camDw, int camDh, int projectionDw, int projectionDh, int duration) {
         animations.add(thread -> {
             int animationAcceleration = 16, finalAnimationMillis = Math.max(duration, animationAcceleration);
+
+            int oldCamX = camera.x, oldCamY = camera.y;
+            int oldProjectionX = projection.x, oldProjectionY = projection.y;
+            int oldCamWidth = camera.width, oldCamHeight = camera.height;
+            int oldProjectionWidth = projection.width, oldProjectionHeight = projection.height;
 
             // totals
             double totalCamDistX = camera.x, totalCamDistY = camera.y;
@@ -87,12 +100,12 @@ public class TileDisplay extends Component {
             // deltas to use
             double camDeltaX = (camDx+0.0) / finalAnimationMillis;
             double camDeltaY = (camDy+0.0) / finalAnimationMillis;
-            double projectionDeltaX = (projectDx+0.0) / finalAnimationMillis;
-            double projectionDeltaY = (projectDy+0.0) / finalAnimationMillis;
+            double projectionDeltaX = (projectionDx +0.0) / finalAnimationMillis;
+            double projectionDeltaY = (projectionDy +0.0) / finalAnimationMillis;
             double camDeltaWidth = (camDw+0.0) / finalAnimationMillis;
             double camDeltaHeight = (camDh+0.0) / finalAnimationMillis;
-            double projectionDeltaWidth = (projectDw+0.0) / finalAnimationMillis;
-            double projectionDeltaHeight = (projectDh+0.0) / finalAnimationMillis;
+            double projectionDeltaWidth = (projectionDw +0.0) / finalAnimationMillis;
+            double projectionDeltaHeight = (projectionDh +0.0) / finalAnimationMillis;
 
             int accumulatedTimeError = 0, targetTime = finalAnimationMillis / (finalAnimationMillis / animationAcceleration);
 
@@ -113,7 +126,6 @@ public class TileDisplay extends Component {
                 camera.setSize((int) totalCamWidthTransform, (int) totalCamHeightTransform);
                 projection.setLocation((int) totalProjectionDistX, (int) totalProjectionDistY);
                 projection.setSize((int) totalProjectionWidthTransform, (int) totalProjectionHeightTransform);
-
                 repaint();
                 try {
                     thread.wait(1);
@@ -147,13 +159,17 @@ public class TileDisplay extends Component {
                 }
             }
 
+            camera.setLocation(new Point(oldCamX+camDx, oldCamY+camDy));
+            camera.setSize(new Dimension(oldCamWidth+camDw, oldCamHeight+camDh));
+            projection.setLocation(new Point(oldProjectionX+ projectionDx, oldProjectionY+ projectionDy));
+            projection.setSize(new Dimension(oldProjectionWidth+ projectionDw, oldProjectionHeight+ projectionDh));
             repaint();
             //System.out.println("done!");
         });
     }
 
     // returns a composed movement for the camera to be played
-    private void animateCamera(Point finalCamLoc, Point finalProjectionLoc, Dimension finalCamSize, Dimension finalProjectionSize, int duration) {
+    public void animateCamera(Point finalCamLoc, Point finalProjectionLoc, Dimension finalCamSize, Dimension finalProjectionSize, int duration) {
         animations.add(thread -> {
             int animationAcceleration = 16, finalAnimationMillis = Math.max(duration, animationAcceleration);
 

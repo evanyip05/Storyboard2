@@ -8,37 +8,99 @@ import Storyboard2.Utils.TextFile;
 
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.KeyEvent;
+import java.awt.event.KeyListener;
 import java.util.ArrayList;
 import java.util.HashMap;
 
 public class Main {
 
-    public static final int tileSize = 16;
+    public static final int tileSpliceSize = 16;
+    public static final int tileOutputSize = 32;
 
 
     public static void main(String[] args) {
-        Level level = new Level(new TextFile("./Files/test.txt").readContent());
-        TileSet tileSet = new TileSet("./Files/breadboard.png", 16, 32);
+        TileSet tileset1 = new TileSet("./Files/tileset.png", tileSpliceSize, tileOutputSize);
+        Level tilesetLayout = new Level(generateLevelFromTileSet(tileset1));
 
-        TileDisplay display = new TileDisplay(level, tileSet,240,240);
+
+        TileSet tileset2 = new TileSet("./Files/tileset.png", tileSpliceSize, tileOutputSize);
+        Level level = new Level(new TextFile("./Files/emptyLevel.txt").readContent());
+
+        TileDisplay tilesetDisplay = new TileDisplay(tilesetLayout, tileset1,8*tileOutputSize,5*tileOutputSize);
+        TileDisplay levelDisplay   = new TileDisplay(level,         tileset2, 480,480);
+
+        JPanel test = new JPanel() {
+            @Override
+            public void paint(Graphics g) {
+                g.drawImage(tileset1.getTileImage(8),0,0,null);
+            }
+        };
+
+        test.setSize(tileOutputSize,tileOutputSize);
+        test.setPreferredSize(new Dimension(tileOutputSize,tileOutputSize));
+
+
 
         JFrame frame = new JFrame();
-        frame.add(display);
+
+
+
+        frame.setLayout(new BorderLayout());
+
+        frame.add(tilesetDisplay, BorderLayout.LINE_END);
+        frame.add(levelDisplay, BorderLayout.CENTER);
+        frame.add(test, BorderLayout.PAGE_END);
+
         frame.pack();
 
         frame.setVisible(true);
         frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
 
+        test.repaint();
 
-        for (int i = 0; i < 100; i++) {
-            display.pan(100,100,100);
-            display.pan(100,100,100);
-            display.pan(100,100,100);
-            display.pan(-300,-300,100);
-        }
+        //levelDisplay.rescale(-160,-320, 1000);
+        //levelDisplay.panProjection(80,160, 1000);
 
-        display.pan(-100,-100,1000);
-        display.pan(98,98,1000);
+        // SUPER FREAKING COOL
+        levelDisplay.animateCamera(80,160,80,160, -160,-320,-160,-320, 1000);
+
+        int time = 1;
+        frame.addKeyListener(new KeyListener() {
+            @Override
+            public void keyTyped(KeyEvent e) {
+
+            }
+
+            @Override
+            public void keyPressed(KeyEvent e) {
+                switch (e.getExtendedKeyCode()) {
+                    case KeyEvent.VK_UP:
+                        levelDisplay.panCamera(0, -tileOutputSize, time);
+                        break;
+                    case KeyEvent.VK_LEFT:
+                        levelDisplay.panCamera(-tileOutputSize, 0, time);
+                        break;
+                    case KeyEvent.VK_DOWN:
+                        levelDisplay.panCamera(0, tileOutputSize, time);
+                        break;
+                    case KeyEvent.VK_RIGHT:
+                        levelDisplay.panCamera(tileOutputSize, 0, time);
+                        break;
+                    case KeyEvent.VK_PAGE_UP:
+                        levelDisplay.zoom(tileOutputSize, time);
+                        break;
+                    case KeyEvent.VK_PAGE_DOWN:
+                        levelDisplay.zoom(-tileOutputSize, time);
+                        break;
+                }
+            }
+
+            @Override
+            public void keyReleased(KeyEvent e) {
+
+            }
+        });
 
     }
 

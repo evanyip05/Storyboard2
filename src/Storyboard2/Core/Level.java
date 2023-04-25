@@ -18,11 +18,14 @@ public class Level {
     /** level from existing data */
     public Level(String info) {
         width = info.split(";")[0].split(",").length;
-        height = info.split(";").length;
+        height = info.split(";").length - ((info.split(";")[info.split(";").length-1].length()<=1)?1:0); // make sure theres no empty line after the last actual line
 
-        for (int y = 0; y < height-1; ++y) {
-            for (int x = 0; x < width-1; ++x) {
-                infoMap.put(new Point(x, y), info.split(";")[y].split(",")[x].replaceAll("\\s+", ""));
+
+        String[] rows = info.split(";");
+
+        for (int i = 0; i < height; i++) {
+            for (int j = 0; j < width; j++) {
+                infoMap.put(new Point(j,i), rows[i].split(",")[j]);
             }
         }
     }

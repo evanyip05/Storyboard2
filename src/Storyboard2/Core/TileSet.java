@@ -22,23 +22,24 @@ public class TileSet {
         Image tileSet = new ImageIcon(tileSetDir).getImage();
 
         this.tileOutputSize = tileOutputSize;
-        this.width = (tileSet.getWidth(null)/tileSpliceSize)+((tileSet.getWidth(null)/tileSpliceSize)%tileSpliceSize!=0?1:0);
-        this.height = (tileSet.getHeight(null)/tileSpliceSize)+((tileSet.getHeight(null)/tileSpliceSize)%tileSpliceSize!=0?1:0);
+        this.width = (tileSet.getWidth(null)/tileSpliceSize);//+((tileSet.getWidth(null)/tileSpliceSize)%tileSpliceSize!=0?1:0);
+        this.height = (tileSet.getHeight(null)/tileSpliceSize);//+((tileSet.getHeight(null)/tileSpliceSize)%tileSpliceSize!=0?1:0);
 
         int tileNum = 1;
 
         for (int y = 0; y < height; ++y) {
             for (int x = 0; x < width; ++x) {
-                BufferedImage tile = new BufferedImage(tileSpliceSize, tileSpliceSize, BufferedImage.TRANSLUCENT);
+                BufferedImage tile = new BufferedImage(tileOutputSize, tileOutputSize, BufferedImage.TRANSLUCENT);
                 Graphics g = tile.getGraphics();
-                g.drawImage(tileSet, 0, 0, tileSpliceSize, tileSpliceSize, x* tileSpliceSize, y* tileSpliceSize, x* tileSpliceSize + tileSpliceSize, y* tileSpliceSize + tileSpliceSize, null);
+                g.drawImage(tileSet, 0, 0, tileOutputSize, tileOutputSize, x* tileSpliceSize, y* tileSpliceSize, x* tileSpliceSize + tileSpliceSize, y* tileSpliceSize + tileSpliceSize, null);
                 g.dispose();
 
                 tileMap.put(tileNum, tile);
-                tileNumMap.put(new Point(x, y), tileNum);
+                tileNumMap.putIfAbsent(new Point(x, y), tileNum);
                 ++tileNum;
             }
         }
+
     }
 
     /** create image from tileset xy, blank tile if dne (calls overload using numMap -> still creates scaled duplicate) */
