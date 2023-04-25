@@ -13,7 +13,7 @@ public class TileDisplay extends Component {
     private Image image;
     private Level level;
 
-    private final Queue animations = new Queue(1);
+    private final Queue animations = new Queue();
 
     private int tileSize;
 

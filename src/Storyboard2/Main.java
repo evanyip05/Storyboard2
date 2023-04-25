@@ -63,10 +63,13 @@ public class Main {
         //levelDisplay.panProjection(80,160, 1000);
 
         // SUPER FREAKING COOL
-        //levelDisplay.animateCamera(80,160,80,160, -160,-320,-160,-320, 1000);
         levelDisplay.rescale(-64,-128,1000);
+        levelDisplay.panCamera(128,128, 1000);
+        levelDisplay.panCamera(320,64, 2500);
 
-        levelDisplay.panCamera(32,32, 1000);
+        levelDisplay.rescale(64,128,1000);
+        levelDisplay.panCamera(-320,-64, 2500);
+        levelDisplay.panCamera(-128,-128, 1000);
 
         int time = 1;
         frame.addKeyListener(new KeyListener() {
