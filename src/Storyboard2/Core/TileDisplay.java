@@ -46,7 +46,7 @@ public class TileDisplay extends Component {
     }
 
     public void rescale(int dw, int dh, int duration) {
-        animateCamera(0,0,0,0,dw,dh,dw,dh,duration);
+        animateCamera(-dw/2,-dh/2,-dw/2,-dh/2,dw,dh,dw,dh,duration);
     }
 
     // add: cant zoom out further than the biggest dimension of the map
@@ -70,6 +70,8 @@ public class TileDisplay extends Component {
     @Override
     public void paint(Graphics g) {
         g.clearRect(0,0,getWidth(),getHeight());
+        g.setColor(Color.BLACK);
+        g.fillRect(0,0,getWidth(),getHeight());
         g.drawImage(
                 image,
                 projection.x,projection.y,projection.x+projection.width,projection.y+projection.height,
