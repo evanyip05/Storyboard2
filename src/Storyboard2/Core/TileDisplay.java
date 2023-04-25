@@ -1,9 +1,11 @@
 package Storyboard2.Core;
 
+import Storyboard2.Utils.ExtendableThread;
 import Storyboard2.Utils.Queue;
 
 import java.awt.*;
 import java.awt.image.BufferedImage;
+import java.util.function.Consumer;
 
 public class TileDisplay extends Component {
 
@@ -14,6 +16,7 @@ public class TileDisplay extends Component {
     private Level level;
 
     private final Queue animations = new Queue();
+    private final Queue movements = new Queue(3);
 
     private int tileSize;
 
@@ -28,8 +31,6 @@ public class TileDisplay extends Component {
 
         setSize(width, height);
         setPreferredSize(new Dimension(width, height));
-
-        animations.restart();
     }
 
     public BufferedImage generateImage(int width, int height) {
@@ -45,23 +46,33 @@ public class TileDisplay extends Component {
         return res;
     }
 
+    public void move(int tilesX, int tilesY, int duration) {
+        if (!animations.isActive()) {//tilesX*tileSize, tilesY*tileSize
+            movements.add(getAnimation(tilesX*tileSize, tilesY*tileSize,0,0,0,0,0,0,duration));
+        }
+    }
+
+    public void rescale(int left, int right, int top, int bottom, int duration) {
+        animations.add(getAnimation(-left,-top,-left,-top,left+right,top+bottom,left+right,top+bottom,duration).andThen(thread -> {movements.play();}));
+    }
+
     public void rescale(int dw, int dh, int duration) {
-        animateCamera(-dw/2,-dh/2,-dw/2,-dh/2,dw,dh,dw,dh,duration);
+        animations.add(getAnimation(-dw/2,-dh/2,-dw/2,-dh/2,dw,dh,dw,dh,duration).andThen(thread -> {movements.play();}));
     }
 
     // add: cant zoom out further than the biggest dimension of the map
     public void zoom(int px, int duration) {
         if (camera.height>tileSize||px<0) {
-            animateCamera(px, px, 0, 0, -2 * px, -2 * px, 0, 0, duration);
+            animations.add(getAnimation(px, px, 0, 0, (camera.height/camera.width)*(-2 * px), (camera.width/camera.height)*(-2 * px), 0, 0, duration).andThen(thread -> {movements.play();}));
         }
     }
 
     public void panProjection(int dx, int dy, int duration) {
-        animateCamera(0,0,dx,dy,0,0,0,0,duration);
+        animations.add(getAnimation(0,0,dx,dy,0,0,0,0,duration).andThen(thread -> {movements.play();}));
     }
 
     public void panCamera(int dx, int dy, int duration) {
-        animateCamera(dx,dy,0,0,0,0,0,0,duration);
+        animations.add(getAnimation(dx,dy,0,0,0,0,0,0,duration).andThen(thread -> {movements.play();}));
     }
 
     public void setLevel(Level level) {this.level = level; image = generateImage(level.getWidth()*tileSize, level.getHeight()*tileSize);}
@@ -84,9 +95,9 @@ public class TileDisplay extends Component {
     // need to modify to check new cam coords after each animation
     // basically put call to call inline, have it make that call, so ther other call has to wait, then when it does get called, it will read the changed data
     // when intially called, need to check if there are other requests to do animations before it
-    public void animateCamera(int camDx, int camDy, int projectionDx, int projectionDy, int camDw, int camDh, int projectionDw, int projectionDh, int duration) {
-        animations.add(thread -> {
-            int animationAcceleration = 16, finalAnimationMillis = Math.max(duration, animationAcceleration);
+    public Consumer<ExtendableThread> getAnimation(int camDx, int camDy, int projectionDx, int projectionDy, int camDw, int camDh, int projectionDw, int projectionDh, int duration) {
+        return (thread -> {
+            int animationAcceleration = 1, finalAnimationMillis = Math.max(duration, animationAcceleration);
 
             int oldCamX = camera.x, oldCamY = camera.y;
             int oldProjectionX = projection.x, oldProjectionY = projection.y;
@@ -129,8 +140,9 @@ public class TileDisplay extends Component {
                 projection.setLocation((int) totalProjectionDistX, (int) totalProjectionDistY);
                 projection.setSize((int) totalProjectionWidthTransform, (int) totalProjectionHeightTransform);
                 repaint();
+
                 try {
-                    thread.wait(1);
+                    Thread.sleep(1); //CHECK ME LATER FOR BUGS, idfk if this is actually sleeping the correct thread
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
@@ -171,8 +183,8 @@ public class TileDisplay extends Component {
     }
 
     // returns a composed movement for the camera to be played
-    public void animateCamera(Point finalCamLoc, Point finalProjectionLoc, Dimension finalCamSize, Dimension finalProjectionSize, int duration) {
-        animations.add(thread -> {
+    public Consumer<ExtendableThread> getAnimation(Point finalCamLoc, Point finalProjectionLoc, Dimension finalCamSize, Dimension finalProjectionSize, int duration) {
+        return (thread -> {
             int animationAcceleration = 16, finalAnimationMillis = Math.max(duration, animationAcceleration);
 
             // totals

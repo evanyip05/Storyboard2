@@ -3,7 +3,7 @@ package Storyboard2;
 import Storyboard2.Core.Level;
 import Storyboard2.Core.TileDisplay;
 import Storyboard2.Core.TileSet;
-import Storyboard2.Utils.Listener;
+import Storyboard2.Utils.Queue;
 import Storyboard2.Utils.TextFile;
 
 import javax.swing.*;
@@ -18,6 +18,25 @@ public class Main {
     public static final int tileSpliceSize = 16;
     public static final int tileOutputSize = 32;
 
+    public static void ma2in(String[] args) {
+        Queue a = new Queue();
+        Queue b = new Queue();
+        Queue c = new Queue();
+
+
+        a.add(thread -> {
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            System.out.println("aaa");
+        });
+
+        c.add(thread -> System.out.println("iadwj"));
+        b.add(thread -> System.out.println("AAA"));
+
+    }
 
     public static void main(String[] args) {
         TileSet tileset1 = new TileSet("./Files/tileset.png", tileSpliceSize, tileOutputSize);
@@ -59,9 +78,6 @@ public class Main {
 
         test.repaint();
 
-        //levelDisplay.rescale(-160,-320, 1000);
-        //levelDisplay.panProjection(80,160, 1000);
-
         // SUPER FREAKING COOL
         levelDisplay.rescale(-64,-128,1000);
         levelDisplay.panCamera(128,128, 1000);
@@ -71,7 +87,9 @@ public class Main {
         levelDisplay.panCamera(-320,-64, 2500);
         levelDisplay.panCamera(-128,-128, 1000);
 
-        int time = 1;
+        //levelDisplay.rescale(0,0,-64,-64,1000);
+
+        int time = 100;
         frame.addKeyListener(new KeyListener() {
             @Override
             public void keyTyped(KeyEvent e) {
@@ -82,16 +100,16 @@ public class Main {
             public void keyPressed(KeyEvent e) {
                 switch (e.getExtendedKeyCode()) {
                     case KeyEvent.VK_UP:
-                        levelDisplay.panCamera(0, -tileOutputSize, time);
+                        levelDisplay.move(0, -1, time);
                         break;
                     case KeyEvent.VK_LEFT:
-                        levelDisplay.panCamera(-tileOutputSize, 0, time);
+                        levelDisplay.move(-1, 0, time);
                         break;
                     case KeyEvent.VK_DOWN:
-                        levelDisplay.panCamera(0, tileOutputSize, time);
+                        levelDisplay.move(0, 1, time);
                         break;
                     case KeyEvent.VK_RIGHT:
-                        levelDisplay.panCamera(tileOutputSize, 0, time);
+                        levelDisplay.move(1, 0, time);
                         break;
                     case KeyEvent.VK_PAGE_UP:
                         levelDisplay.zoom(tileOutputSize, time);
