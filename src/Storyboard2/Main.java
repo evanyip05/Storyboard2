@@ -1,176 +1,19 @@
 package Storyboard2;
 
 import Storyboard2.Core.Level;
-import Storyboard2.Core.TileDisplay;
 import Storyboard2.Core.TileSet;
-import Storyboard2.Utils.Queue;
 import Storyboard2.Utils.TextFile;
-
-import javax.swing.*;
-import java.awt.*;
-import java.awt.event.KeyEvent;
-import java.awt.event.KeyListener;
-import java.util.ArrayList;
-import java.util.HashMap;
 
 public class Main {
 
     public static final int tileSpliceSize = 16;
     public static final int tileOutputSize = 32;
 
-    public static void ma2in(String[] args) {
-        Queue a = new Queue();
-        Queue b = new Queue();
-        Queue c = new Queue();
-
-
-        a.add(thread -> {
-            try {
-                Thread.sleep(1000);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-            System.out.println("aaa");
-        });
-
-        c.add(thread -> System.out.println("iadwj"));
-        b.add(thread -> System.out.println("AAA"));
-
-    }
-
     public static void main(String[] args) {
         TileSet tileset1 = new TileSet("./Files/tileset.png", tileSpliceSize, tileOutputSize);
-        Level tilesetLayout = new Level(generateLevelFromTileSet(tileset1));
-
-
-        TileSet tileset2 = new TileSet("./Files/tileset.png", tileSpliceSize, tileOutputSize);
         Level level = new Level(new TextFile("./Files/emptyLevel.txt").readContent());
 
-        TileDisplay tilesetDisplay = new TileDisplay(tilesetLayout, tileset1,8*tileOutputSize,5*tileOutputSize);
-        TileDisplay levelDisplay   = new TileDisplay(level,         tileset2, 480,480);
-
-        JPanel test = new JPanel() {
-            @Override
-            public void paint(Graphics g) {
-                g.drawImage(tileset1.getTileImage(8),0,0,null);
-            }
-        };
-
-        test.setSize(tileOutputSize,tileOutputSize);
-        test.setPreferredSize(new Dimension(tileOutputSize,tileOutputSize));
-
-
-
-        JFrame frame = new JFrame();
-
-
-
-        frame.setLayout(new BorderLayout());
-
-        frame.add(tilesetDisplay, BorderLayout.LINE_END);
-        frame.add(levelDisplay, BorderLayout.CENTER);
-        frame.add(test, BorderLayout.PAGE_END);
-
-        frame.pack();
-
-        frame.setVisible(true);
-        frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
-
-        test.repaint();
-
-        // SUPER FREAKING COOL
-        levelDisplay.rescale(-64,-128,1000);
-        levelDisplay.panCamera(128,128, 1000);
-        levelDisplay.panCamera(320,64, 2500);
-
-        levelDisplay.rescale(64,128,1000);
-        levelDisplay.panCamera(-320,-64, 2500);
-        levelDisplay.panCamera(-128,-128, 1000);
-
-        //levelDisplay.rescale(0,0,-64,-64,1000);
-
-        int time = 100;
-        frame.addKeyListener(new KeyListener() {
-            @Override
-            public void keyTyped(KeyEvent e) {
-
-            }
-
-            @Override
-            public void keyPressed(KeyEvent e) {
-                switch (e.getExtendedKeyCode()) {
-                    case KeyEvent.VK_UP:
-                        levelDisplay.move(0, -1, time);
-                        break;
-                    case KeyEvent.VK_LEFT:
-                        levelDisplay.move(-1, 0, time);
-                        break;
-                    case KeyEvent.VK_DOWN:
-                        levelDisplay.move(0, 1, time);
-                        break;
-                    case KeyEvent.VK_RIGHT:
-                        levelDisplay.move(1, 0, time);
-                        break;
-                    case KeyEvent.VK_PAGE_UP:
-                        levelDisplay.zoom(tileOutputSize, time);
-                        break;
-                    case KeyEvent.VK_PAGE_DOWN:
-                        levelDisplay.zoom(-tileOutputSize, time);
-                        break;
-                }
-            }
-
-            @Override
-            public void keyReleased(KeyEvent e) {
-
-            }
-        });
-
-    }
-
-    public static void main() {
-        HashMap<Integer, Character> map = new HashMap<>();
-        ArrayList<String> combos = new ArrayList<>();
-
-        map.put(0, 'U');
-        map.put(1, 'U');
-        map.put(2, 'D');
-        map.put(3, 'D');
-        map.put(4, 'L');
-        map.put(5, 'R');
-
-        // find all combos no replacement
-        for (int i = 0; i < 6; i++) {
-            char first = map.get(i);
-            for (int j = 0; j < 6; j++) {
-                if (j != i) {
-                    char second = map.get(j);
-                    for (int k = 0; k < 6; k++) {
-                        if (k != i && k != j) {
-                            char third = map.get(k);
-                            for (int l = 0; l < 6; l++) {
-                                if (l != i && l != j && l != k) {
-                                    char fourth = map.get(l);
-                                    for (int m = 0; m < 6; m++) {
-                                        if (m != i && m != j && m != k && m != l) {
-                                            char fifth = map.get(m);
-                                            for (int n = 0; n < 6; n++) {
-                                                if (n != i && n != j && n != k && n != l && n != m) {
-                                                    char sixth = map.get(n);
-                                                    combos.add("" + first + second + third + fourth + fifth + sixth);
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        combos.forEach(System.out::println);
+        new GUI(level, tileset1);
     }
 
     public static String generateLevelFromTileSet(TileSet tileSet) {return generateLevel(tileSet.getWidth(), tileSet.getHeight());}
@@ -204,3 +47,34 @@ public class Main {
     }
 
 }
+/*
+
+public void animationDemo() {
+        / SUPER FREAKING COOL
+        level.rescale(-2,-6,1000);
+        level.panCamera(128,128, 1000);
+        level.panCamera(320,64, 2500);
+        level.rescale(2,6,1000);
+
+        level.rescale(-1,-3,-5,-7, 1000);
+        level.rescale(1,3,5,7, 1000);
+        /
+        level.rescale(0,0,-64,-64,1000);
+
+        //level.rescale(-1, -2, 1000);
+        //level.rescale(0,-4,1000);
+        }
+
+public void tester() {
+        int tileSpliceSize= 16, tileOutputSize = 32;
+
+        JPanel test = new JPanel() {@Override public void paint(Graphics g) {
+        g.drawImage(new TileSet("./Files/tileset.png", tileSpliceSize, tileOutputSize).getTileImage(8),0,0,null);
+        }};
+
+        test.setSize(tileOutputSize,tileOutputSize);
+        test.setPreferredSize(new Dimension(tileOutputSize,tileOutputSize));
+
+        frame.add(test, BorderLayout.PAGE_END);
+        }
+ */

@@ -53,6 +53,14 @@ public class TileSet {
         return res;
     }
 
+    /** tile image by tile num, blank tile if dne */ // make a copy of the image from the tileMap
+    public BufferedImage getScaledTileImage(int tileNum, int tileOutputSize) {
+        BufferedImage tile = tileMap.get(tileNum);
+        BufferedImage res = new BufferedImage(tileOutputSize, tileOutputSize, BufferedImage.TRANSLUCENT);
+        if (tile!=null) {Graphics g = res.getGraphics(); g.drawImage(tile, 0, 0, tileOutputSize, tileOutputSize, null); g.dispose();}
+        return res;
+    }
+
     /** get tile num for point on tileset, returns 0 if missing */
     public int getTileNum(int x, int y) {
         Integer num = tileNumMap.get(new Point(x,y));

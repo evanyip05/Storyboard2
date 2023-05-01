@@ -20,21 +20,24 @@ public class TileDisplay extends Component {
 
     private int tileSize;
 
-    public TileDisplay(Level level, TileSet tileSet, int width, int height) {
+    public TileDisplay(Level level, TileSet tileSet, int tilesX, int tilesY) {
         this.tileSize = tileSet.getTileOutputSize();
         this.tileSet = tileSet;
         this.level = level;
 
-        image = generateImage(level.getWidth()*tileSize, level.getHeight()*tileSize);
-        camera = new Rectangle(width, height);
-        projection = new Rectangle(width, height);
+        image = generateImage();
 
-        setSize(width, height);
-        setPreferredSize(new Dimension(width, height));
+        camera = new Rectangle(tilesX*tileSize, tilesY*tileSize);
+        projection = new Rectangle(tilesX*tileSize, tilesY*tileSize);
+
+        setSize(tilesX*tileSize, tilesY*tileSize);
+        setPreferredSize(new Dimension(tilesX*tileSize, tilesY*tileSize));
     }
 
-    public BufferedImage generateImage(int width, int height) {
-        BufferedImage res = new BufferedImage(width, height, BufferedImage.TRANSLUCENT);
+    public Dimension getProjectionDim() {return projection.getSize();}
+
+    public BufferedImage generateImage() {
+        BufferedImage res = new BufferedImage(level.getWidth()*tileSize, level.getHeight()*tileSize, BufferedImage.TRANSLUCENT);
         Graphics g = res.getGraphics();
 
         for (int y = 0; y < level.getHeight(); y++) {
@@ -52,31 +55,25 @@ public class TileDisplay extends Component {
         }
     }
 
+    // intertwine rescaling and zooming into a method
     public void rescale(int left, int right, int top, int bottom, int duration) {
-        animations.add(getAnimation(-left,-top,-left,-top,left+right,top+bottom,left+right,top+bottom,duration).andThen(thread -> {movements.play();}));
+        animations.add(getAnimation(-left,-top,-left,-top,(left + right),(top + bottom),(left + right),(top + bottom),duration));
     }
 
-    public void rescale(int dw, int dh, int duration) {
-        animations.add(getAnimation(-dw/2,-dh/2,-dw/2,-dh/2,dw,dh,dw,dh,duration).andThen(thread -> {movements.play();}));
+    public void rescale(int width, int height, int duration) {
+        rescale(width/2, width/2, height/2,height/2, duration);
     }
 
     // add: cant zoom out further than the biggest dimension of the map
-    public void zoom(int px, int duration) {
-        if (camera.height>tileSize||px<0) {
-            animations.add(getAnimation(px, px, 0, 0, (camera.height/camera.width)*(-2 * px), (camera.width/camera.height)*(-2 * px), 0, 0, duration).andThen(thread -> {movements.play();}));
-        }
+    public void zoom(double multiplier, int duration) {
+        animations.add(getAnimation((int)-((projection.width*multiplier)/2),(int)-((projection.height*multiplier)/2),0,0,(int)(projection.width*multiplier),(int)(projection.height*multiplier),0,0,duration));
     }
 
-    public void panProjection(int dx, int dy, int duration) {
-        animations.add(getAnimation(0,0,dx,dy,0,0,0,0,duration).andThen(thread -> {movements.play();}));
-    }
+    public void panProjection(int dx, int dy, int duration) {animations.add(getAnimation(0,0,dx,dy,0,0,0,0,duration).andThen(thread -> {movements.play();}));}
+    public void panCamera(int dx, int dy, int duration) {animations.add(getAnimation(dx,dy,0,0,0,0,0,0,duration).andThen(thread -> {movements.play();}));}
 
-    public void panCamera(int dx, int dy, int duration) {
-        animations.add(getAnimation(dx,dy,0,0,0,0,0,0,duration).andThen(thread -> {movements.play();}));
-    }
-
-    public void setLevel(Level level) {this.level = level; image = generateImage(level.getWidth()*tileSize, level.getHeight()*tileSize);}
-    public void setTileSet(TileSet tileSet) {this.tileSet = tileSet; this.tileSize = tileSet.getTileOutputSize(); image = generateImage(level.getWidth()*tileSize, level.getHeight()*tileSize);}
+    public void setLevel(Level level) {this.level = level; image = generateImage();}
+    public void setTileSet(TileSet tileSet) {this.tileSet = tileSet; this.tileSize = tileSet.getTileOutputSize(); image = generateImage();}
 
     @Override
     public void paint(Graphics g) {
@@ -95,7 +92,7 @@ public class TileDisplay extends Component {
     // need to modify to check new cam coords after each animation
     // basically put call to call inline, have it make that call, so ther other call has to wait, then when it does get called, it will read the changed data
     // when intially called, need to check if there are other requests to do animations before it
-    public Consumer<ExtendableThread> getAnimation(int camDx, int camDy, int projectionDx, int projectionDy, int camDw, int camDh, int projectionDw, int projectionDh, int duration) {
+    private Consumer<ExtendableThread> getAnimation(int camDx, int camDy, int projectionDx, int projectionDy, int camDw, int camDh, int projectionDw, int projectionDh, int duration) {
         return (thread -> {
             int animationAcceleration = 1, finalAnimationMillis = Math.max(duration, animationAcceleration);
 
@@ -183,7 +180,7 @@ public class TileDisplay extends Component {
     }
 
     // returns a composed movement for the camera to be played
-    public Consumer<ExtendableThread> getAnimation(Point finalCamLoc, Point finalProjectionLoc, Dimension finalCamSize, Dimension finalProjectionSize, int duration) {
+    private Consumer<ExtendableThread> getAnimation(Point finalCamLoc, Point finalProjectionLoc, Dimension finalCamSize, Dimension finalProjectionSize, int duration) {
         return (thread -> {
             int animationAcceleration = 16, finalAnimationMillis = Math.max(duration, animationAcceleration);
 

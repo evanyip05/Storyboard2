@@ -20,12 +20,9 @@ public class Queue extends ExtendableThread {
     }
 
     public void pause() {
-        try {
-            synchronized (this) {
-                this.wait();
-            }
-        } catch (InterruptedException e) {
-            e.printStackTrace();
+        synchronized (this) {
+            try {this.wait();}
+            catch (InterruptedException e) {e.printStackTrace();}
         }
     }
 
