@@ -10,6 +10,8 @@ import java.util.HashMap;
  *  can output scaled images using tileset xy or tilenum */
 public class TileSet {
 
+    private final Image missingTexture = new ImageIcon("Files/missing.png").getImage();
+
     private final HashMap<Integer, BufferedImage> tileMap = new HashMap<>();
     private final HashMap<Point, Integer> tileNumMap = new HashMap<>();
 
@@ -49,7 +51,9 @@ public class TileSet {
     public BufferedImage getTileImage(int tileNum) {
         BufferedImage tile = tileMap.get(tileNum);
         BufferedImage res = new BufferedImage(tileOutputSize, tileOutputSize, BufferedImage.TRANSLUCENT);
-        if (tile!=null) {Graphics g = res.getGraphics(); g.drawImage(tile, 0, 0, tileOutputSize, tileOutputSize, null); g.dispose();}
+        Graphics g = res.getGraphics();
+        g.drawImage((tile==null)?missingTexture:tile, 0, 0, tileOutputSize, tileOutputSize, null);
+        g.dispose();
         return res;
     }
 

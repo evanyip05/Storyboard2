@@ -3,16 +3,20 @@ package Storyboard2.Core;
 import Storyboard2.Utils.ExtendableThread;
 import Storyboard2.Utils.Queue;
 
+import javax.swing.*;
 import java.awt.*;
 import java.awt.image.BufferedImage;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.function.Consumer;
 
 public class TileDisplay extends Component {
 
+    private final HashMap<Integer, Consumer<Graphics>> inbetweens = new HashMap<>();
+    private final ArrayList<BufferedImage> layers = new ArrayList<>();
     private final Rectangle camera, projection;
 
     private TileSet tileSet;
-    private Image image;
     private Level level;
 
     private final Queue animations = new Queue();
@@ -25,7 +29,7 @@ public class TileDisplay extends Component {
         this.tileSet = tileSet;
         this.level = level;
 
-        image = generateImage();
+        generateLayers();
 
         camera = new Rectangle(tilesX*tileSize, tilesY*tileSize);
         projection = new Rectangle(tilesX*tileSize, tilesY*tileSize);
@@ -34,60 +38,66 @@ public class TileDisplay extends Component {
         setPreferredSize(new Dimension(tilesX*tileSize, tilesY*tileSize));
     }
 
+    public int getTileInfo(int levelX, int levelY, TileData type) {return level.getInfo(levelX, levelY, type);}
+    public String getTileInfo(int levelX, int levelY) {return level.getInfo(levelX, levelY);}
+
+    public BufferedImage getTileImage(int levelX, int levelY) {return tileSet.getTileImage(level.getInfo(levelX, levelY, TileData.DISPLAY));}
+
     public Dimension getProjectionDim() {return projection.getSize();}
 
-    public BufferedImage generateImage() {
-        BufferedImage res = new BufferedImage(level.getWidth()*tileSize, level.getHeight()*tileSize, BufferedImage.TRANSLUCENT);
-        Graphics g = res.getGraphics();
+    public void generateLayers() {
+        ArrayList<BufferedImage> res = new ArrayList<>();
 
-        for (int y = 0; y < level.getHeight(); y++) {
-            for (int x = 0; x < level.getWidth(); x++) {
-                g.drawImage(tileSet.getTileImage(Integer.parseInt(level.getInfo(x,y).split(":")[0].strip())), x*tileSize, y*tileSize, null);
-            }
+        for (int i = 0; i < level.getLayers(); i++) {
+            BufferedImage layer = new BufferedImage(level.getWidth()*tileSize, level.getHeight()*tileSize, BufferedImage.TRANSLUCENT);
+            Graphics g = layer.getGraphics();
+            level.getMatchedTiles(TileData.OVERLAY, i).forEach(tile -> {
+                g.drawImage(tileSet.getTileImage(level.getInfo(tile.x,tile.y, TileData.DISPLAY)), tile.x*tileSize, tile.y*tileSize, null);
+            });
+            res.add(layer);
         }
 
-        return res;
+        layers.clear();
+        layers.addAll(res);
     }
 
-    public void move(int tilesX, int tilesY, int duration) {
-        if (!animations.isActive()) {//tilesX*tileSize, tilesY*tileSize
-            movements.add(getAnimation(tilesX*tileSize, tilesY*tileSize,0,0,0,0,0,0,duration));
-        }
-    }
+    public void addInbetween(Consumer<Graphics> drawOp, int afterLayer) {inbetweens.put(afterLayer, drawOp);}
 
-    // intertwine rescaling and zooming into a method
-    public void rescale(int left, int right, int top, int bottom, int duration) {
-        animations.add(getAnimation(-left,-top,-left,-top,(left + right),(top + bottom),(left + right),(top + bottom),duration));
-    }
+    // intertwine rescaling and zooming into a method,     // add: cant zoom out further than the biggest dimension of the map
+    public void rescale(int left, int right, int top, int bottom, int duration) {animations.add(getAnimation(-left,-top,-left,-top,(left + right),(top + bottom),(left + right),(top + bottom),duration));}
+    public void rescale(int width, int height, int duration) {rescale(width/2, width/2, height/2,height/2, duration);}
+    public void zoom(double multiplier, int duration) {animations.add(getAnimation((int)-((projection.width*multiplier)/2),(int)-((projection.height*multiplier)/2),0,0,(int)(projection.width*multiplier),(int)(projection.height*multiplier),0,0,duration));}
 
-    public void rescale(int width, int height, int duration) {
-        rescale(width/2, width/2, height/2,height/2, duration);
-    }
-
-    // add: cant zoom out further than the biggest dimension of the map
-    public void zoom(double multiplier, int duration) {
-        animations.add(getAnimation((int)-((projection.width*multiplier)/2),(int)-((projection.height*multiplier)/2),0,0,(int)(projection.width*multiplier),(int)(projection.height*multiplier),0,0,duration));
-    }
-
+    public void move(int tilesX, int tilesY, int duration) {if (!animations.isActive()) {movements.add(getAnimation(tilesX*tileSize, tilesY*tileSize,0,0,0,0,0,0,duration));}}
     public void panProjection(int dx, int dy, int duration) {animations.add(getAnimation(0,0,dx,dy,0,0,0,0,duration).andThen(thread -> {movements.play();}));}
     public void panCamera(int dx, int dy, int duration) {animations.add(getAnimation(dx,dy,0,0,0,0,0,0,duration).andThen(thread -> {movements.play();}));}
 
-    public void setLevel(Level level) {this.level = level; image = generateImage();}
-    public void setTileSet(TileSet tileSet) {this.tileSet = tileSet; this.tileSize = tileSet.getTileOutputSize(); image = generateImage();}
+    public void setLevel(Level level) {this.level = level; generateLayers();}
+    public void setTileSet(TileSet tileSet) {this.tileSet = tileSet; this.tileSize = tileSet.getTileOutputSize(); generateLayers();}
 
     @Override
     public void paint(Graphics g) {
         g.clearRect(0,0,getWidth(),getHeight());
         g.setColor(Color.BLACK);
         g.fillRect(0,0,getWidth(),getHeight());
+
+        BufferedImage finalImage = new BufferedImage(level.getWidth()*tileSize, level.getHeight()*tileSize, BufferedImage.TRANSLUCENT);
+        Graphics buffer = finalImage.getGraphics();
+
+        for (int layer = 0; layer < layers.size(); layer++) {
+            buffer.drawImage(layers.get(layer),0,0,null);
+            if (inbetweens.containsKey(layer)) {inbetweens.get(layer).accept(buffer);}
+        }
+
+        inbetweens.forEach((layer, drawOp) -> {if (layer > (layers.size()-1)) {drawOp.accept(buffer);}});
+
         g.drawImage(
-                image,
+                finalImage,
                 projection.x,projection.y,projection.x+projection.width,projection.y+projection.height,
                 camera.x,camera.y,camera.x+camera.width,camera.y+camera.height,
                 null
         );
     }
-
 
     // need to modify to check new cam coords after each animation
     // basically put call to call inline, have it make that call, so ther other call has to wait, then when it does get called, it will read the changed data
